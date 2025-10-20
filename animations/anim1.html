@@ -44,12 +44,207 @@
                 transform: translateY(-200px);
             }
         }
+        
+        /* WebSocket status indicator */
+        .status-indicator {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        
+        .status-indicator.connected {
+            background: rgba(76, 175, 80, 0.3);
+            border: 2px solid rgba(76, 175, 80, 0.8);
+            box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+        }
+        
+        .status-indicator.disconnected {
+            background: rgba(244, 67, 54, 0.9);
+            border: 2px solid rgba(244, 67, 54, 1);
+            box-shadow: 0 0 12px rgba(244, 67, 54, 0.6);
+            animation: pulse-error 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse-error {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.1); }
+        }
+        
+        .flash-animation {
+            animation: flashEffect 1.5s ease-in-out;
+        }
+        
+        @keyframes flashEffect {
+            0% { transform: scale(1) brightness(1); }
+            50% { transform: scale(1.1) brightness(1.5); }
+            100% { transform: scale(1) brightness(1); }
+        }
     </style>
 </head>
 <body>
     <div class="animation-container">
-        <div class="title">Animation 1</div>
-        <div class="ball"></div>
+        <div class="title">Animation 1 - Bouncing Ball</div>
+        <div class="ball" id="mainElement"></div>
+        <div class="status-indicator" id="statusIndicator"></div>
     </div>
+
+    <!-- Include Socket.IO client library -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        class SmartAnimation {
+            constructor() {
+                this.mainElement = document.getElementById('mainElement');
+                this.statusIndicator = document.getElementById('statusIndicator');
+                this.currentScene = 'anim1';
+                this.socket = null;
+                
+                this.initWebSocket();
+                this.startHeartbeat();
+            }
+            
+            initWebSocket() {
+                try {
+                    // Connect to the OBS-TV-Animator server
+                    const serverUrl = window.location.origin;
+                    this.socket = io(serverUrl);
+                    
+                    // Connection events
+                    this.socket.on('connect', () => {
+                        console.log('Connected to OBS-TV-Animator server');
+                        this.updateStatus('Connected', true);
+                        this.flashAnimation();
+                    });
+                    
+                    this.socket.on('disconnect', () => {
+                        console.log('Disconnected from server');
+                        this.updateStatus('Disconnected', false);
+                    });
+                    
+                    // Animation events
+                    this.socket.on('animation_changed', (data) => {
+                        console.log('Animation changed:', data);
+                        this.handleAnimationChange(data);
+                        
+                        // Auto-refresh page if requested (for seamless media changes)
+                        if (data.refresh_page) {
+                            console.log('Page refresh requested, reloading in 1 second...');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1000);
+                        }
+                    });
+                    
+                    // Listen for explicit page refresh commands
+                    this.socket.on('page_refresh', (data) => {
+                        console.log('Page refresh command received:', data);
+                        //this.showRefreshNotification(data);
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
+                    });
+                    
+                    this.socket.on('status', (data) => {
+                        console.log('Server status:', data);
+                        if (data.current_animation) {
+                            console.log(`Current animation: ${data.current_animation}`);
+                        }
+                    });
+                    
+                    this.socket.on('error', (data) => {
+                        console.error('Server error:', data);
+                        this.updateStatus('Error: ' + data.message, false);
+                    });
+                    
+                } catch (error) {
+                    console.error('WebSocket initialization failed:', error);
+                    this.updateStatus('Connection Failed', false);
+                }
+            }
+            
+            updateStatus(message, connected) {
+                this.statusIndicator.className = connected ? 
+                    'status-indicator connected' : 
+                    'status-indicator disconnected';
+            }
+            
+            handleAnimationChange(data) {
+                // Flash animation to indicate change
+                this.flashAnimation();
+                
+                // Log the change
+                console.log(`Animation changed from ${data.previous_animation} to ${data.current_animation}`);
+            }
+            
+            showRefreshNotification(data) {
+                // Show a brief notification before page refresh
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: rgba(0, 0, 0, 0.9);
+                    color: white;
+                    padding: 20px 40px;
+                    border-radius: 10px;
+                    font-size: 18px;
+                    z-index: 9999;
+                    text-align: center;
+                `;
+                notification.innerHTML = `
+                    <div>Loading new content...</div>
+                    <div style="font-size: 14px; margin-top: 10px; opacity: 0.8;">
+                        ${data.new_media} (${data.media_type})
+                    </div>
+                `;
+                document.body.appendChild(notification);
+                
+                // Remove notification after refresh (cleanup)
+                setTimeout(() => {
+                    if (notification.parentNode) {
+                        notification.parentNode.removeChild(notification);
+                    }
+                }, 2000);
+            }
+            
+            flashAnimation() {
+                this.mainElement.classList.remove('flash-animation');
+                // Force reflow
+                this.mainElement.offsetHeight;
+                this.mainElement.classList.add('flash-animation');
+                
+                setTimeout(() => {
+                    this.mainElement.classList.remove('flash-animation');
+                }, 1500);
+            }
+            
+            startHeartbeat() {
+                // Request status every 30 seconds to keep connection alive
+                setInterval(() => {
+                    if (this.socket && this.socket.connected) {
+                        this.socket.emit('get_status');
+                    }
+                }, 30000);
+            }
+        }
+        
+        // Initialize the smart animation when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Initializing Animation 1 with WebSocket support');
+            new SmartAnimation();
+        });
+        
+        // Auto-refresh fallback (if WebSocket fails)
+        setTimeout(() => {
+            if (!window.socketConnected) {
+                console.log('WebSocket not connected, falling back to auto-refresh');
+                setTimeout(() => window.location.reload(), 60000);
+            }
+        }, 5000);
+    </script>
 </body>
 </html>

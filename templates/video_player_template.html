@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Player - {{ video_filename }}</title>
+    <link rel="stylesheet" href="../static/css/video_player_template.css">
+</head>
+<body>
+    <div id="videoContainer">
+        <video 
+            id="mainVideo" 
+            autoplay 
+            muted 
+            loop 
+            preload="auto"
+            playsinline
+            controls="false">
+            <source src="{{ video_url }}" type="{{ video_type }}">
+            <p class="error">Your browser does not support the video tag or this video format.</p>
+        </video>
+        
+        <div class="loading" id="loadingIndicator">
+            <div class="spinner"></div>
+            Loading video...
+        </div>
+    </div>
+    
+    <div class="status-indicator disconnected" id="statusIndicator">
+        Connecting...
+    </div>
+    
+    <div class="video-info" id="videoInfo">
+        Playing: {{ video_filename }}
+    </div>
+
+    <!-- Include Socket.IO client library -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script>
+        // Pass template variables to JavaScript
+        window.videoFilename = '{{ video_filename }}';
+    </script>
+    <script src="../static/js/video_player_template.js"></script>
+</body>
+</html>

@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS-TV-Animator - File Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../static/css/admin_manage.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="header-text">
+                <h1><i class="fa-solid fa-folder-open"></i> File Management</h1>
+            </div>
+            <div class="header-controls">
+                <button class="theme-toggle" id="themeToggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
+                <a href="/admin" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <!-- Upload Section -->
+        <div class="upload-section">
+            <h2><i class="fa-solid fa-upload"></i> Upload New Files</h2>
+            <p style="opacity: 0.8; margin-bottom: 20px;">
+                Drag and drop files here or click to browse. Supports HTML animations and video files.
+            </p>
+            
+            <div class="upload-area" id="uploadArea">
+                <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                <div class="upload-text">Drop files here or click to browse</div>
+                <div class="upload-subtext">Supports: HTML, MP4, WebM, OGG, AVI, MOV, MKV</div>
+                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                    Choose Files
+                </button>
+            </div>
+            
+            <input type="file" id="fileInput" class="file-input" multiple 
+                   accept=".html,.htm,.mp4,.webm,.ogg,.avi,.mov,.mkv">
+            
+            <div class="progress-bar" id="progressBar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            
+            <div class="upload-status" id="uploadStatus"></div>
+        </div>
+        
+        <!-- Files Section -->
+        <div class="files-section">
+            <div class="files-header">
+                <h2><i class="fa-solid fa-th"></i> Manage Files</h2>
+                <button class="upload-btn" onclick="loadFiles()" style="padding: 10px 20px; font-size: 0.9em;">
+                    <i class="fa-solid fa-rotate-right"></i> Refresh
+                </button>
+            </div>
+            
+            <div class="filter-tabs">
+                <button class="filter-tab active" onclick="filterFiles('all')">All Files</button>
+                <button class="filter-tab" onclick="filterFiles('animation')">Animations</button>
+                <button class="filter-tab" onclick="filterFiles('video')">Videos</button>
+            </div>
+            
+            <div class="files-grid" id="filesGrid">
+                <div class="loading">Loading files...</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="../static/js/admin_manage.js"></script>
+</body>
+</html>

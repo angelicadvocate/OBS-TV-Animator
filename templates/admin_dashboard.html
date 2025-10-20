@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS-TV-Animator - Admin Dashboard</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../static/css/admin_dashboard.css">
+</head>
+<body>
+    <div class="header">
+        <div class="header-content">
+            <div class="header-text">
+                <h1><i class="fa-solid fa-rocket"></i> OBS-TV-Animator</h1>
+                <p>Admin Dashboard - Monitor and manage your Smart TV animations</p>
+            </div>
+            <div class="header-controls">
+                <button class="theme-toggle" id="themeToggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="dashboard-grid">
+            <!-- Server Status Card -->
+            <div class="card">
+                <h3><i class="fa-solid fa-chart-simple"></i> Server Status</h3>
+                <div class="status-grid">
+                    <div class="status-item">
+                        <div class="status-value" id="totalFiles">-</div>
+                        <div class="status-label">Total Files</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="connectedClients">-</div>
+                        <div class="status-label">Connected Devices</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="animationCount">-</div>
+                        <div class="status-label">Animations</div>
+                    </div>
+                    <div class="status-item">
+                        <div class="status-value" id="videoCount">-</div>
+                        <div class="status-label">Videos</div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Current Media Card -->
+            <div class="card">
+                <h3><i class="fa-solid fa-play"></i> Current Media</h3>
+                <div class="current-media">
+                    <div class="media-name" id="currentMediaName">Loading...</div>
+                    <div class="media-type" id="currentMediaType">-</div>
+                </div>
+                <h4 style="margin: 20px 0 15px 0; color: #64b5f6;">Connected Devices</h4>
+                <div id="connectedDevicesList">
+                    <div class="connected-devices">
+                        <span class="device-indicator"></span>
+                        <span id="deviceStatus">Loading devices...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Quick Actions Card -->
+            <div class="card quick-actions">
+                <h3><i class="fa-solid fa-bolt"></i> Quick Actions</h3>
+                <div class="actions-grid">
+                    <a href="/admin/manage" class="button"><i class="fa-solid fa-folder"></i> Manage Files</a>
+                    <button class="button secondary" onclick="refreshStatus()"><i class="fa-solid fa-rotate-right"></i> Refresh Status</button>
+                    <button class="button secondary" onclick="openTVView()"><i class="fa-solid fa-tv"></i> Open TV View</button>
+                    <button class="button danger" onclick="showRestartDialog()"><i class="fa-solid fa-power-off"></i> Restart Server</button>
+                </div>
+            </div>
+            
+            <!-- Available Media Card -->
+            <div class="card">
+                <h3><i class="fa-solid fa-th"></i> Available Media</h3>
+                <div class="media-list" id="mediaList">
+                    <div style="text-align: center; opacity: 0.6;">Loading media files...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="refresh-btn" onclick="refreshStatus()" title="Refresh Dashboard">
+        <i class="fa-solid fa-rotate-right"></i>
+    </button>
+    
+    <!-- Include Socket.IO for real-time updates -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../static/js/admin_dashboard.js"></script>
+</body>
+</html>
