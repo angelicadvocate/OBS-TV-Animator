@@ -18,7 +18,7 @@ Upload and manage media entirely through the web-based admin panel, no manual fi
 
 ---
 
-## 🚀 Installation (Docker Only)
+## 🚀 Installation (Docker)
 
 ### Prerequisites
 
