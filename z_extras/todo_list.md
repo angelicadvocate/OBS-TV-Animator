@@ -15,11 +15,23 @@
   - Add note in README to see detailed usage page in admin panel after deployment
   - Create installation, setup, and usage instructions page in admin portal
 
+- [ ] **Add preview images to README.md**
+  - Screenshot of Smart TV display showing live animations
+  - Admin dashboard interface showing user management and file uploads
+  - Example of real-time switching between animations
+  - OBS/StreamerBot integration demonstration
+
 - [ ] **Add instructions/usage page to admin interface**
   - Setup instructions for OBS Studio integration
   - StreamerBot configuration and webhook setup
   - Manual terminal/PowerShell command examples for testing
   - WebSocket API documentation and examples
+
+- [ ] **Repurpose redundant refresh button as instructions button**
+  - Convert the refresh button in "Quick Actions" card to "Instructions" button
+  - Keep the existing refresh button in bottom-right corner (avoid duplication)
+  - Link instructions button to the new usage page when created
+  - Update button styling and icon (fa-book or fa-question-circle)
 
 ## Priority: Low (Code Organization & Cleanup)
 
