@@ -1,0 +1,542 @@
+/* =============================================================================
+   OBS-TV-Animator Global CSS Design System
+   Based on Angels-NowPlaying-Widget design patterns
+   ============================================================================= */
+
+:root {
+  /* Color Palette - Default Dark Theme */
+  --highlight: hsl(221, 82%, 58%);
+  --primary-blue: #3b82f6;
+  --primary-blue-hover: #2563eb;
+  --background-primary: #1a1a1a;
+  --background-secondary: #2a2a2a;
+  --background-tertiary: #333333;
+  --header-bg: #000000;
+  --text-primary: #f0f0f0;
+  --text-secondary: #b0b0b0;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --shadow-primary: rgba(0, 0, 0, 0.4);
+  --shadow-header: rgba(0, 0, 0, 0.8);
+  
+  /* Typography */
+  --font-main: "proxima-nova", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+  --font-size-base: 0.95rem;
+  --font-size-large: 1.2rem;
+  --font-size-small: 0.85rem;
+  --font-size-xs: 13px;
+  
+  /* Spacing */
+  --spacing-xs: 0.25rem;
+  --spacing-sm: 0.5rem;
+  --spacing-md: 1rem;
+  --spacing-lg: 1.5rem;
+  --spacing-xl: 2rem;
+  
+  /* Border Radius */
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  
+  /* Transitions */
+  --transition-fast: 0.2s ease-in-out;
+  --transition-medium: 0.3s ease;
+}
+
+/* Light Theme Variables */
+body:not(.dark-mode) {
+  --highlight: hsl(221, 82%, 58%);
+  --primary-blue: #3b82f6;
+  --primary-blue-hover: #2563eb;
+  --background-primary: #ffffff;
+  --background-secondary: #f8f9fa;
+  --background-tertiary: #e9ecef;
+  --header-bg: linear-gradient(135deg, #1e293b 0%, #334155 50%, #1e293b 100%);
+  --text-primary: #1f2937;
+  --text-secondary: #6b7280;
+  --border-color: rgba(0, 0, 0, 0.1);
+  --shadow-primary: rgba(0, 0, 0, 0.1);
+  --shadow-header: rgba(0, 0, 0, 0.2);
+}
+
+/* Dark Theme Variables (explicit class) */
+body.dark-mode {
+  --highlight: hsl(221, 82%, 58%);
+  --primary-blue: #3b82f6;
+  --primary-blue-hover: #2563eb;
+  --background-primary: #1a1a1a;
+  --background-secondary: #2a2a2a;
+  --background-tertiary: #333333;
+  --header-bg: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
+  --text-primary: #f0f0f0;
+  --text-secondary: #b0b0b0;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --shadow-primary: rgba(0, 0, 0, 0.4);
+  --shadow-header: rgba(0, 0, 0, 0.8);
+}
+
+/* =============================================================================
+   Base Styles
+   ============================================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: var(--spacing-xl);
+  font-family: var(--font-main);
+  background-color: var(--background-primary);
+  color: var(--text-primary);
+  font-size: var(--font-size-base);
+  line-height: 1.6;
+}
+
+h1 {
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+  color: var(--text-primary);
+}
+
+a {
+  color: var(--primary-blue);
+  text-decoration: none;
+  transition: opacity var(--transition-fast);
+}
+
+a:hover {
+  opacity: 0.8;
+}
+
+/* =============================================================================
+   Header System (Floating Mascot + Share/Support)
+   ============================================================================= */
+
+.header-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: calc(-1 * var(--spacing-xl)) calc(-1 * var(--spacing-xl)) var(--spacing-xl);
+  min-height: 80px;
+  background: var(--header-bg);
+  padding: var(--spacing-md) var(--spacing-xl);
+  box-shadow: 0 4px 20px var(--shadow-header);
+  position: relative;
+}
+
+.header-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(ellipse at center top, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+/* Light mode header overlay */
+body:not(.dark-mode) .header-container::before {
+  background: radial-gradient(ellipse at center top, rgba(59, 130, 246, 0.12) 0%, transparent 70%);
+}
+
+/* Header Left Side - Mascot and Title */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: calc(var(--spacing-md) - 10px);
+}
+
+.floating-mascot {
+  height: 90px;
+  animation: float 3s ease-in-out infinite;
+  filter: drop-shadow(0 4px 8px var(--shadow-primary));
+}
+
+.header-title h1 {
+  margin: 0;
+  font-size: 2rem;
+  font-family: 'Orbitron', monospace;
+  font-weight: 700;
+  background: linear-gradient(135deg, #ffffff, var(--highlight));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+  text-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+  letter-spacing: 1px;
+  margin-bottom: -10px;
+  white-space: nowrap;
+}
+
+.header-title p {
+  margin: 0;
+  opacity: 0.8;
+  font-size: var(--font-size-base);
+  color: var(--text-secondary);
+}
+
+/* Header Right Side - Button Rows */
+.header-right {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  align-items: flex-end;
+}
+
+.button-row {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+}
+
+/* Logout button styling */
+.logout-btn {
+  background-color: #dc2626 !important;
+}
+
+.logout-btn:hover {
+  background-color: #b91c1c !important;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0px); }
+}
+
+/* =============================================================================
+   Button Components
+   ============================================================================= */
+
+.btn-primary {
+  background-color: var(--highlight);
+  color: white;
+  padding: 4px 10px;
+  border: none;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  cursor: pointer;
+  opacity: 0.85;
+  transition: all var(--transition-fast);
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.btn-primary:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* Icon-only social media buttons */
+#shareTwitter,
+#shareFacebook,
+#shareReddit,
+#shareDiscord {
+  padding: 6px 8px;
+  font-size: 13px;
+  min-width: 32px;
+  justify-content: center;
+  height: 26px;
+  box-sizing: border-box;
+}
+
+#shareTwitter i,
+#shareFacebook i,
+#shareReddit i,
+#shareDiscord i {
+  font-size: 14px;
+}
+
+.user-welcome {
+  background-color: var(--highlight);
+  color: white;
+  padding: 4px 10px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  opacity: 0.9;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+  font-weight: 500;
+  background: linear-gradient(135deg, var(--highlight) 0%, var(--primary-blue) 100%);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  box-sizing: border-box;
+  height: 26px;
+}
+
+.btn-secondary {
+  background-color: var(--primary-blue);
+  color: white;
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-weight: bold;
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+  font-family: inherit;
+}
+
+.btn-secondary:hover {
+  background-color: var(--primary-blue-hover);
+}
+
+/* =============================================================================
+   Card Component System
+   ============================================================================= */
+
+.card {
+  background-color: var(--background-secondary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: 0 4px 20px var(--shadow-primary);
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-lg);
+  transition: transform var(--transition-medium);
+  border: 1px solid var(--border-color);
+}
+
+.card:hover {
+  transform: translateY(-2px);
+}
+
+.card img {
+  width: 100%;
+  height: 150px;
+  object-fit: contain;
+  margin-left: 20px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 0;
+}
+
+.card p {
+  text-align: center;
+  margin-bottom: var(--spacing-md);
+  font-size: var(--font-size-base);
+}
+
+/* =============================================================================
+   Grid Layouts
+   ============================================================================= */
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: var(--spacing-xl);
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+  gap: var(--spacing-xl);
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--spacing-xl);
+}
+
+/* =============================================================================
+   Responsive Design
+   ============================================================================= */
+
+@media (max-width: 820px) {
+  .header-container {
+    margin-top: var(--spacing-xs);
+  }
+}
+
+@media (max-width: 768px) {
+  .header-container {
+    flex-direction: column;
+    gap: var(--spacing-md);
+    min-height: auto;
+    padding: var(--spacing-md);
+  }
+  
+  .header-left {
+    justify-content: center;
+  }
+  
+  .header-right {
+    align-items: center;
+    gap: var(--spacing-sm);
+  }
+  
+  .button-row {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+  
+  .floating-mascot {
+    height: 65px;
+  }
+  
+  .header-title h1 {
+    font-size: 1.8rem;
+  }
+  
+  .grid-4 {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  body {
+    padding: var(--spacing-md);
+  }
+  
+  .header-icon {
+    font-size: 2.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .grid-4 {
+    grid-template-columns: 1fr;
+  }
+  
+  .floating-mascot {
+    height: 100px;
+  }
+  
+  .header-text {
+    height: 80px;
+  }
+  
+  .header-icon {
+    font-size: 2rem;
+  }
+  
+  .mascot-corner {
+    bottom: 2px;
+    left: var(--spacing-sm);
+  }
+}
+
+/* =============================================================================
+   Admin Interface Specific Styles
+   ============================================================================= */
+
+.admin-container {
+  max-width: 1600px;
+  margin: 0 auto;
+  padding: var(--spacing-xl);
+}
+
+.status-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: var(--spacing-md);
+}
+
+.status-item {
+  text-align: center;
+  padding: var(--spacing-lg);
+  background: var(--background-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  transition: all var(--transition-medium);
+}
+
+.status-item:hover {
+  background: var(--background-tertiary);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px var(--shadow-primary);
+}
+
+.status-value {
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--highlight);
+}
+
+.status-label {
+  font-size: var(--font-size-small);
+  color: var(--text-secondary);
+  margin-top: var(--spacing-xs);
+}
+
+/* =============================================================================
+   Theme Toggle Support (Dark Mode)
+   ============================================================================= */
+
+.theme-toggle {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: var(--text-primary);
+  width: 32px;
+  height: 26px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all var(--transition-medium);
+  font-size: 11px;
+  box-sizing: border-box;
+}
+
+.theme-toggle:hover {
+  background: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+/* =============================================================================
+   Utility Classes
+   ============================================================================= */
+
+.text-center { text-align: center; }
+.text-left { text-align: left; }
+.text-right { text-align: right; }
+
+.mb-0 { margin-bottom: 0; }
+.mb-1 { margin-bottom: var(--spacing-xs); }
+.mb-2 { margin-bottom: var(--spacing-sm); }
+.mb-3 { margin-bottom: var(--spacing-md); }
+.mb-4 { margin-bottom: var(--spacing-lg); }
+
+.mt-0 { margin-top: 0; }
+.mt-1 { margin-top: var(--spacing-xs); }
+.mt-2 { margin-top: var(--spacing-sm); }
+.mt-3 { margin-top: var(--spacing-md); }
+.mt-4 { margin-top: var(--spacing-lg); }
+
+/* =============================================================================
+   Corner Mascot (Bottom Left)
+   ============================================================================= */
+
+.mascot-corner {
+  position: fixed;
+  bottom: 4px;
+  left: var(--spacing-lg);
+  z-index: 1000;
+  pointer-events: none;
+}
+
+/* =============================================================================
+   Header TV Icon
+   ============================================================================= */
+
+.header-icon {
+  font-size: 4rem;
+  color: #e0f2ff;
+  margin-right: var(--spacing-md);
+  text-shadow: 
+    0 0 10px rgba(135, 206, 250, 0.8),
+    0 0 20px rgba(135, 206, 250, 0.4),
+    0 0 30px rgba(135, 206, 250, 0.2);
+}

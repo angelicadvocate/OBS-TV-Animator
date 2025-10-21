@@ -13,46 +13,15 @@ services:
       # Mount media directories to allow adding content without rebuilding
       - ./animations:/app/animations:ro
       - ./videos:/app/videos:ro
-      # Mount data directory for persistent state
+      # Mount data directory for persistent state, config, and logs
       - ./data:/app/data
-      # Optional: Mount logs directory
-      - ./logs:/app/logs
     environment:
       - FLASK_ENV=production
       - PORT=8080
       - PYTHONUNBUFFERED=1
-    networks:
-      - obs-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  # Optional: Add a reverse proxy for production deployments
-  # nginx:
-  #   image: nginx:alpine
-  #   container_name: obs-tv-animator-proxy
-  #   restart: unless-stopped
-  #   ports:
-  #     - "80:80"
-  #     - "443:443"
-  #   volumes:
-  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
-  #     - ./ssl:/etc/nginx/ssl:ro
-  #   depends_on:
-  #     - obs-tv-animator
-  #   networks:
-  #     - obs-network
-
-networks:
-  obs-network:
-    driver: bridge
-
-# Optional: Add persistent volumes for production
-volumes:
-  obs-data:
-    driver: local
-  obs-logs:
-    driver: local

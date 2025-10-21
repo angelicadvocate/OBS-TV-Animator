@@ -109,7 +109,7 @@ class AdminDashboard {
                     <div class="media-filename">${file.name}</div>
                     <div class="media-type-badge">${file.type.toUpperCase()} • ${this.formatFileSize(file.size)}</div>
                 </div>
-                <button class="play-btn" onclick="dashboard.playMedia('${file.name}')">
+                <button class="play-btn ${file.name === currentMedia ? 'playing' : ''}" onclick="dashboard.playMedia('${file.name}')">
                     ${file.name === currentMedia ? '<i class="fa-solid fa-pause"></i> Playing' : '<i class="fa-solid fa-play"></i> Play'}
                 </button>
             </div>
@@ -227,36 +227,15 @@ function showRestartDialog() {
     }
 }
 
-// Dark Mode Functions
-function toggleDarkMode() {
-    const body = document.body;
-    const themeIcon = document.getElementById('themeIcon');
-    
-    body.classList.toggle('dark-mode');
-    
-    if (body.classList.contains('dark-mode')) {
-        themeIcon.className = 'fa-solid fa-sun';
-        localStorage.setItem('darkMode', 'enabled');
-    } else {
-        themeIcon.className = 'fa-solid fa-moon';
-        localStorage.setItem('darkMode', 'disabled');
+// Theme functions moved to global.js
+
+// Close credentials warning
+function closeWarning() {
+    const warning = document.getElementById('credentialsWarning');
+    if (warning) {
+        warning.style.animation = 'slideUp 0.3s ease-in';
+        setTimeout(() => {
+            warning.remove();
+        }, 300);
     }
 }
-
-function initializeDarkMode() {
-    const darkMode = localStorage.getItem('darkMode');
-    const body = document.body;
-    const themeIcon = document.getElementById('themeIcon');
-    
-    if (darkMode === 'enabled') {
-        body.classList.add('dark-mode');
-        if (themeIcon) {
-            themeIcon.className = 'fa-solid fa-sun';
-        }
-    }
-}
-
-// Initialize dark mode on page load
-document.addEventListener('DOMContentLoaded', () => {
-    initializeDarkMode();
-});

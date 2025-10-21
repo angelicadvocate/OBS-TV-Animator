@@ -16,10 +16,10 @@ echo ""
 echo "===================================================================================="
 
 # Create directories if they don't exist
-mkdir -p /app/animations /app/videos /app/data /app/logs
+mkdir -p /app/animations /app/videos /app/data /app/data/config /app/data/logs
 
 # Set permissions
-chmod 755 /app/animations /app/videos /app/data /app/logs
+chmod 755 /app/animations /app/videos /app/data /app/data/config /app/data/logs
 
 # Check if required directories are mounted
 if [ ! -d "/app/animations" ]; then

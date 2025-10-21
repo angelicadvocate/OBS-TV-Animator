@@ -4,25 +4,76 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OBS-TV-Animator - File Management</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../static/css/global.css">
     <link rel="stylesheet" href="../static/css/admin_manage.css">
 </head>
-<body>
-    <div class="header">
-        <div class="header-content">
-            <div class="header-text">
-                <h1><i class="fa-solid fa-folder-open"></i> File Management</h1>
+<body{% if user_theme == 'dark' %} class="dark-mode"{% endif %}>
+    <div class="header-container">
+        <!-- Left Side: TV Icon and Title -->
+        <div class="header-left">
+            <i class="fas fa-tv header-icon"></i>
+            <div class="header-title">
+                <h1>OBS-TV-Animator</h1>
+                <p>File Management</p>
             </div>
-            <div class="header-controls">
-                <button class="theme-toggle" id="themeToggle" onclick="toggleDarkMode()" title="Toggle Dark Mode">
+        </div>
+
+        
+        <!-- Right Side: Three Rows of Buttons -->
+        <div class="header-right">
+
+            <!-- Row 1: Share Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="shareTwitter" title="Share on Twitter">
+                    <i class="fa-brands fa-twitter"></i>
+                </button>
+                <button class="btn-primary" id="shareFacebook" title="Share on Facebook">
+                    <i class="fa-brands fa-facebook"></i>
+                </button>
+                <button class="btn-primary" id="shareReddit" title="Share on Reddit">
+                    <i class="fa-brands fa-reddit"></i>
+                </button>
+                <button class="btn-primary" id="shareDiscord" title="Share on Discord">
+                    <i class="fa-brands fa-discord"></i>
+                </button>
+                <div class="user-welcome">
+                    <i class="fa-solid fa-user"></i> Welcome: {{ current_username }}
+                </div>
+            </div>
+                        
+            <!-- Row 2: Support Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="tipButton">
+                    <i class="fa-solid fa-heart"></i> Tip on Stream Elements
+                </button>
+                <button class="btn-primary" id="githubButton">
+                    <i class="fa-brands fa-github"></i> Star us on GitHub
+                </button>
+            </div>
+            
+            <!-- Row 3: Admin Controls -->
+            <div class="button-row">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
                     <i class="fa-solid fa-moon" id="themeIcon"></i>
                 </button>
-                <a href="/admin" class="back-btn"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</a>
+                <a href="/admin" class="btn-primary" style="text-decoration: none;" title="Back to Dashboard">
+                    <i class="fa-solid fa-arrow-left"></i> Dashboard
+                </a>
+                <a href="/admin/users" class="btn-primary" style="text-decoration: none;" title="Manage Users">
+                    <i class="fa-solid fa-users"></i> Users
+                </a>
+                <a href="/admin/logout" class="btn-primary logout-btn" style="text-decoration: none;" title="Logout">
+                    <i class="fa-solid fa-sign-out-alt"></i> Logout
+                </a>
             </div>
         </div>
     </div>
     
-    <div class="container">
+    <div class="admin-container">
         <!-- Upload Section -->
         <div class="upload-section">
             <h2><i class="fa-solid fa-upload"></i> Upload New Files</h2>
@@ -70,6 +121,11 @@
         </div>
     </div>
 
+    <!-- Notification System -->
+    <div id="notification" class="notification"></div>
+
+    <!-- Scripts -->
+    <script src="../static/js/global.js"></script>
     <script src="../static/js/admin_manage.js"></script>
 </body>
 </html>

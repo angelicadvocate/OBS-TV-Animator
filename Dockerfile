@@ -36,8 +36,8 @@ COPY . .
 RUN chmod +x docker-entrypoint.sh
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/animations /app/videos /app/data /app/logs && \
-    chmod -R 755 /app/animations /app/videos /app/data /app/logs
+RUN mkdir -p /app/animations /app/videos /app/data /app/data/config /app/data/logs && \
+    chmod -R 755 /app/animations /app/videos /app/data
 
 # Create non-root user for security
 RUN groupadd -r appuser && useradd -r -g appuser appuser && \

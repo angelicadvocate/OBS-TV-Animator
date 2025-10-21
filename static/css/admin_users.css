@@ -1,0 +1,288 @@
+/* =============================================================================
+   Admin User Management Specific Styles
+   Global styles are in global.css
+   ============================================================================= */
+
+/* Users Grid Layout */
+.users-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: var(--spacing-lg);
+    max-width: 1600px;
+    margin: 0 auto;
+}
+
+/* Form Styling */
+.user-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.form-group label {
+    color: var(--text-primary);
+    font-weight: bold;
+    font-size: var(--font-size-small);
+}
+
+.form-group input {
+    background: var(--background-secondary);
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-sm) var(--spacing-md);
+    color: var(--text-primary);
+    font-size: var(--font-size-base);
+    transition: all var(--transition-medium);
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: var(--highlight);
+    box-shadow: 0 0 0 3px rgba(255, 235, 59, 0.2);
+}
+
+.form-group input:invalid {
+    border-color: #f44336;
+}
+
+.form-group input:valid {
+    border-color: var(--success-green, #4caf50);
+}
+
+/* Form Buttons - Match Input Height */
+.user-form .btn-primary {
+    padding: var(--spacing-sm) var(--spacing-md);
+    height: auto;
+    min-height: 44px;
+    font-size: var(--font-size-base);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-xs);
+}
+
+/* Users List */
+.users-list {
+    background: var(--background-tertiary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    box-shadow: inset 0 2px 4px var(--shadow-primary);
+}
+
+.users-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+    padding-bottom: var(--spacing-sm);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.user-count {
+    color: var(--text-primary);
+    font-weight: bold;
+}
+
+.btn-secondary {
+    background: var(--background-secondary);
+    color: var(--text-primary);
+    border: 2px solid var(--border-color);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all var(--transition-medium);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.btn-secondary:hover {
+    border-color: var(--highlight);
+    background: var(--background-tertiary);
+    transform: translateY(-1px);
+}
+
+/* User Items */
+.user-item {
+    background: var(--background-secondary);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all var(--transition-medium);
+    position: relative;
+}
+
+.user-item:hover {
+    background: var(--background-tertiary);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.user-info {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.username {
+    font-weight: bold;
+    color: var(--text-primary);
+    font-size: 1.1em;
+}
+
+.user-meta {
+    color: var(--text-secondary);
+    font-size: var(--font-size-small);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.user-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+}
+
+.delete-btn {
+    background: var(--background-secondary);
+    color: #f44336;
+    border: 2px solid rgba(244, 67, 54, 0.3);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-size: var(--font-size-small);
+    transition: all var(--transition-medium);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+}
+
+.delete-btn:hover {
+    background: #f44336;
+    color: white;
+    border-color: #f44336;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(244, 67, 54, 0.3);
+}
+
+/* Protection Icon for Last User */
+.no-delete-info {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    border-radius: var(--radius-md);
+    background: var(--background-tertiary);
+    border: 2px solid var(--border-color);
+    opacity: 0.7;
+    font-size: var(--font-size-small);
+}
+
+/* Default Admin Badge */
+.default-badge {
+    color: var(--text-secondary);
+    font-size: 0.8em;
+    font-weight: normal;
+    margin-left: 8px;
+    padding: 2px 6px;
+    background: rgba(255, 235, 59, 0.15);
+    border: 1px solid rgba(255, 235, 59, 0.3);
+    border-radius: var(--radius-sm);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Current User Indicator */
+.user-item.current-user {
+    border-color: var(--highlight);
+    background: rgba(255, 235, 59, 0.05);
+}
+
+.user-item.current-user::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--highlight);
+    border-radius: var(--radius-sm);
+}
+
+.user-item.current-user .user-info {
+    position: relative;
+}
+
+/* Loading State */
+.loading {
+    text-align: center;
+    padding: var(--spacing-lg);
+    color: var(--text-secondary);
+    font-style: italic;
+}
+
+/* Success/Error States */
+.form-success {
+    background: rgba(76, 175, 80, 0.1);
+    border-color: #4caf50;
+    color: #4caf50;
+}
+
+.form-error {
+    background: rgba(244, 67, 54, 0.1);
+    border-color: #f44336;
+    color: #f44336;
+}
+
+/* Responsive Design */
+@media (max-width: 1400px) {
+    .users-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    /* Stack change password and add user on top row, users list below */
+    .users-grid .card:nth-child(3) {
+        grid-column: 1 / -1;
+    }
+}
+
+@media (max-width: 900px) {
+    .users-grid {
+        grid-template-columns: 1fr;
+        gap: var(--spacing-md);
+    }
+    
+    .admin-container {
+        padding: var(--spacing-md);
+    }
+}
+
+@media (max-width: 768px) {
+    .users-header {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+        align-items: stretch;
+    }
+    
+    .user-item {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--spacing-sm);
+    }
+    
+    .user-actions {
+        justify-content: center;
+    }
+}

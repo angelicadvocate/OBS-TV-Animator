@@ -6,19 +6,33 @@ Supports dynamic updates triggered via OBS WebSocket, StreamerBot, or REST API.
 
 import json
 import os
+import hashlib
+from datetime import datetime, timedelta
 from pathlib import Path
-from flask import Flask, render_template, jsonify, request, send_from_directory
+from functools import wraps
+from flask import Flask, render_template, jsonify, request, send_from_directory, redirect, url_for, flash, session
 from flask_socketio import SocketIO, emit
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'obs-tv-animator-secret-key'
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(hours=1)
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Initialize Flask-Login
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'admin_login'
+login_manager.login_message = 'Please log in to access the admin panel.'
 
 # Configuration
 ANIMATIONS_DIR = Path(__file__).parent / "animations"
 VIDEOS_DIR = Path(__file__).parent / "videos"
 DATA_DIR = Path(__file__).parent / "data"
+CONFIG_DIR = DATA_DIR / "config"  # Config now under data directory
+LOGS_DIR = DATA_DIR / "logs"      # Logs now under data directory
 STATE_FILE = DATA_DIR / "state.json"
+USERS_FILE = CONFIG_DIR / "users.json"
 
 # Supported file extensions
 HTML_EXTENSIONS = {'.html', '.htm'}
@@ -27,6 +41,61 @@ VIDEO_EXTENSIONS = {'.mp4', '.webm', '.ogg', '.avi', '.mov', '.mkv'}
 # Connected devices tracking
 connected_devices = {}  # {session_id: {'type': 'tv'|'admin', 'user_agent': str, 'connected_at': timestamp}}
 admin_sessions = set()  # Track admin dashboard sessions
+
+# Authentication classes and functions
+class User(UserMixin):
+    def __init__(self, username):
+        self.id = username
+        self.username = username
+
+@login_manager.user_loader
+def load_user(username):
+    """Load user for Flask-Login"""
+    users_data = load_users_config()
+    if username in users_data.get('admin_users', {}):
+        return User(username)
+    return None
+
+def load_users_config():
+    """Load users configuration from file"""
+    try:
+        if USERS_FILE.exists():
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except Exception as e:
+        print(f"Error loading users config: {e}")
+    
+    # Default config if file doesn't exist
+    return {
+        "admin_users": {
+            "admin": {
+                "password": "admin123",
+                "created_at": datetime.now().isoformat(),
+                "permissions": ["read", "write", "delete", "upload"]
+            }
+        }
+    }
+
+def verify_password(username, password):
+    """Verify user password"""
+    users_data = load_users_config()
+    admin_users = users_data.get('admin_users', {})
+    
+    if username in admin_users:
+        stored_password = admin_users[username]['password']
+        # In production, you'd want to hash passwords
+        return stored_password == password
+    
+    return False
+
+def admin_required(f):
+    """Decorator to require admin authentication for routes"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return redirect(url_for('admin_login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
 
 
 def get_connected_devices_info():
@@ -544,19 +613,275 @@ def handle_video_volume(data):
 
 # Admin interface routes
 
+@app.route('/admin/login', methods=['GET', 'POST'])
+def admin_login():
+    """Admin login page"""
+    if current_user.is_authenticated:
+        return redirect(url_for('admin_dashboard'))
+    
+    error = None
+    username = None
+    
+    if request.method == 'POST':
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        remember = bool(request.form.get('remember'))
+        
+        if not username or not password:
+            error = "Please enter both username and password."
+        elif verify_password(username, password):
+            user = User(username)
+            login_user(user, remember=remember)
+            
+            # Update last login timestamp
+            try:
+                users_data = load_users_config()
+                if username in users_data.get('admin_users', {}):
+                    users_data['admin_users'][username]['last_login'] = datetime.now().isoformat()
+                    save_users_config(users_data)
+            except Exception as e:
+                print(f"Error updating last login for {username}: {e}")
+            
+            # Check if logging in with default credentials
+            if username == 'admin' and password == 'admin123':
+                session['show_default_credentials_warning'] = True
+            
+            next_page = request.args.get('next')
+            if next_page and next_page.startswith('/admin'):
+                return redirect(next_page)
+            return redirect(url_for('admin_dashboard'))
+        else:
+            error = "Invalid username or password."
+    
+    return render_template('admin_login.html', error=error, username=username)
+
+@app.route('/admin/logout')
+@admin_required
+def admin_logout():
+    """Admin logout"""
+    logout_user()
+    return redirect(url_for('index'))
+
 @app.route('/admin')
+@admin_required
 def admin_dashboard():
     """Admin dashboard for managing animations and monitoring status"""
-    return render_template('admin_dashboard.html')
+    # Get user's theme preference
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        user_theme = user_data.get('theme', 'dark')  # Default to dark
+        print(f"Dashboard: User '{current_user.username}' theme is '{user_theme}'")
+    except Exception as e:
+        print(f"Dashboard: Error loading theme: {e}")
+        user_theme = 'dark'  # Fallback to dark theme
+    
+    # Check for default credentials warning
+    show_credentials_warning = session.pop('show_default_credentials_warning', False)
+    
+    return render_template('admin_dashboard.html', 
+                         user_theme=user_theme,
+                         current_username=current_user.username,
+                         show_credentials_warning=show_credentials_warning)
 
 
 @app.route('/admin/manage')
+@admin_required
 def admin_manage_files():
     """File management page for uploading/deleting animations"""
-    return render_template('admin_manage.html')
+    # Get user's theme preference
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        user_theme = user_data.get('theme', 'dark')  # Default to dark
+    except Exception:
+        user_theme = 'dark'  # Fallback to dark theme
+    
+    return render_template('admin_manage.html', 
+                         user_theme=user_theme,
+                         current_username=current_user.username)
+
+
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    """User management page"""
+    # Get user's theme preference
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        user_theme = user_data.get('theme', 'dark')  # Default to dark
+    except Exception:
+        user_theme = 'dark'  # Fallback to dark theme
+    
+    return render_template('admin_users.html', 
+                         user_theme=user_theme,
+                         current_username=current_user.username)
+
+
+def save_users_config(users_data):
+    """Save users configuration to file"""
+    try:
+        CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users_data, f, indent=2, ensure_ascii=False)
+        return True
+    except Exception as e:
+        print(f"Error saving users config: {e}")
+        return False
+
+
+@app.route('/admin/api/users', methods=['GET'])
+@admin_required
+def api_get_users():
+    """API endpoint to get list of users"""
+    try:
+        users_data = load_users_config()
+        admin_users = users_data.get('admin_users', {})
+        
+        user_list = []
+        for username, user_info in admin_users.items():
+            user_list.append({
+                'username': username,
+                'created_at': user_info.get('created_at'),
+                'last_login': user_info.get('last_login'),
+                'permissions': user_info.get('permissions', [])
+            })
+        
+        return jsonify({
+            'success': True,
+            'users': user_list,
+            'current_user': current_user.username
+        })
+    
+    except Exception as e:
+        print(f"Error getting users: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/admin/api/users', methods=['POST'])
+@admin_required
+def api_add_user():
+    """API endpoint to add new user"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        
+        if not username or not password:
+            return jsonify({'success': False, 'error': 'Username and password are required'}), 400
+        
+        if len(username) < 3:
+            return jsonify({'success': False, 'error': 'Username must be at least 3 characters long'}), 400
+        
+        if len(password) < 6:
+            return jsonify({'success': False, 'error': 'Password must be at least 6 characters long'}), 400
+        
+        users_data = load_users_config()
+        admin_users = users_data.get('admin_users', {})
+        
+        if username in admin_users:
+            return jsonify({'success': False, 'error': 'Username already exists'}), 400
+        
+        # Add new user
+        admin_users[username] = {
+            'password': password,  # In production, hash this!
+            'created_at': datetime.now().isoformat(),
+            'permissions': ['read', 'write', 'delete', 'upload'],
+            'theme': 'dark'  # Default theme
+        }
+        
+        users_data['admin_users'] = admin_users
+        
+        if save_users_config(users_data):
+            return jsonify({'success': True, 'message': f'User {username} added successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to save user data'}), 500
+    
+    except Exception as e:
+        print(f"Error adding user: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/admin/api/users', methods=['DELETE'])
+@admin_required
+def api_delete_user():
+    """API endpoint to delete user"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        
+        if not username:
+            return jsonify({'success': False, 'error': 'Username is required'}), 400
+        
+        if username == current_user.username:
+            return jsonify({'success': False, 'error': 'Cannot delete your own account'}), 400
+        
+        users_data = load_users_config()
+        admin_users = users_data.get('admin_users', {})
+        
+        if username not in admin_users:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Prevent deleting the last remaining user
+        if len(admin_users) <= 1:
+            return jsonify({'success': False, 'error': 'Cannot delete the last remaining user'}), 400
+        
+        # Delete user
+        del admin_users[username]
+        users_data['admin_users'] = admin_users
+        
+        if save_users_config(users_data):
+            return jsonify({'success': True, 'message': f'User {username} deleted successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to save user data'}), 500
+    
+    except Exception as e:
+        print(f"Error deleting user: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/admin/api/change-password', methods=['POST'])
+@admin_required
+def api_change_password():
+    """API endpoint to change current user's password"""
+    try:
+        data = request.get_json()
+        current_password = data.get('current_password', '')
+        new_password = data.get('new_password', '')
+        
+        if not current_password or not new_password:
+            return jsonify({'success': False, 'error': 'Current and new passwords are required'}), 400
+        
+        if len(new_password) < 6:
+            return jsonify({'success': False, 'error': 'New password must be at least 6 characters long'}), 400
+        
+        # Verify current password
+        if not verify_password(current_user.username, current_password):
+            return jsonify({'success': False, 'error': 'Current password is incorrect'}), 400
+        
+        users_data = load_users_config()
+        admin_users = users_data.get('admin_users', {})
+        
+        if current_user.username not in admin_users:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        # Update password
+        admin_users[current_user.username]['password'] = new_password  # In production, hash this!
+        users_data['admin_users'] = admin_users
+        
+        if save_users_config(users_data):
+            return jsonify({'success': True, 'message': 'Password changed successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to save password change'}), 500
+    
+    except Exception as e:
+        print(f"Error changing password: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/admin/api/status')
+@admin_required
 def admin_status():
     """API endpoint for admin dashboard status"""
     try:
@@ -587,6 +912,7 @@ def admin_status():
 
 
 @app.route('/admin/api/files')
+@admin_required
 def admin_list_files():
     """API endpoint to list all files with metadata"""
     try:
@@ -620,6 +946,7 @@ def admin_list_files():
 
 
 @app.route('/admin/api/upload', methods=['POST'])
+@admin_required
 def admin_upload_file():
     """Handle file uploads for animations and videos"""
     try:
@@ -666,6 +993,7 @@ def admin_upload_file():
 
 
 @app.route('/admin/api/delete/<file_type>/<filename>', methods=['DELETE'])
+@admin_required
 def admin_delete_file(file_type, filename):
     """Delete a file (animation or video)"""
     try:
@@ -698,6 +1026,7 @@ def admin_delete_file(file_type, filename):
 
 
 @app.route('/admin/api/thumbnail/<filename>')
+@admin_required
 def admin_thumbnail(filename):
     """Generate or serve thumbnails for files"""
     try:
@@ -726,15 +1055,111 @@ def admin_thumbnail(filename):
         return jsonify({'error': str(e)}), 500
 
 
+# Theme Management API
+@app.route('/admin/api/theme', methods=['GET'])
+@admin_required
+def get_user_theme():
+    """Get current user's theme preference"""
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        theme = user_data.get('theme', 'dark')  # Default to dark
+        return jsonify({'theme': theme})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/admin/api/theme', methods=['POST'])
+@admin_required
+def save_user_theme():
+    """Save current user's theme preference"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No JSON data provided'}), 400
+            
+        theme = data.get('theme', 'dark')
+        print(f"Saving theme '{theme}' for user '{current_user.username}'")
+        
+        # Validate theme value
+        if theme not in ['light', 'dark']:
+            return jsonify({'error': 'Invalid theme. Must be "light" or "dark"'}), 400
+        
+        # Load current users config
+        users_data = load_users_config()
+        print(f"Loaded users data: {users_data}")
+        
+        # Update user's theme preference
+        if current_user.username in users_data.get('admin_users', {}):
+            users_data['admin_users'][current_user.username]['theme'] = theme
+            print(f"Updated user theme to: {theme}")
+            
+            # Save back to file with proper formatting
+            try:
+                with open(USERS_FILE, 'w', encoding='utf-8') as f:
+                    json.dump(users_data, f, indent=4, ensure_ascii=False)
+                print(f"Successfully saved theme to {USERS_FILE}")
+                
+                return jsonify({'success': True, 'theme': theme})
+            except Exception as write_error:
+                print(f"Error writing to file: {write_error}")
+                return jsonify({'error': f'Failed to save theme: {write_error}'}), 500
+        else:
+            print(f"User '{current_user.username}' not found in admin_users")
+            return jsonify({'error': 'User not found'}), 404
+            
+    except Exception as e:
+        print(f"Error in save_user_theme: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+# Debug endpoint to check user data
+@app.route('/admin/api/debug/user')
+@admin_required
+def debug_user_data():
+    """Debug endpoint to check current user data"""
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        return jsonify({
+            'username': current_user.username,
+            'user_data': user_data,
+            'theme': user_data.get('theme', 'NOT_SET')
+        })
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 if __name__ == '__main__':
     # Ensure required directories exist
     ANIMATIONS_DIR.mkdir(exist_ok=True)
     VIDEOS_DIR.mkdir(exist_ok=True)
     DATA_DIR.mkdir(exist_ok=True)
+    CONFIG_DIR.mkdir(exist_ok=True)
+    LOGS_DIR.mkdir(exist_ok=True)
     
     # Initialize state file if it doesn't exist
     if not STATE_FILE.exists():
         save_state({"current_animation": "anim1.html"})
+    
+    # Initialize users config if it doesn't exist
+    if not USERS_FILE.exists():
+        default_users = {
+            "admin_users": {
+                "admin": {
+                    "password": "admin123",
+                    "created_at": datetime.now().isoformat(),
+                    "permissions": ["read", "write", "delete", "upload"],
+                    "theme": "dark"
+                }
+            },
+            "session_config": {
+                "timeout_minutes": 60,
+                "remember_me_days": 7
+            }
+        }
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(default_users, f, indent=2)
     
     # Run the Flask-SocketIO server on all interfaces (0.0.0.0) port 8080
     print("OBS-TV-Animator WebSocket Server Starting...")

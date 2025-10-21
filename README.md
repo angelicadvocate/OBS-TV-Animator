@@ -1,3 +1,5 @@
+### ⚠️ This project is still in development and not production-ready.
+
 # OBS-TV-Animator
 A lightweight Flask-SocketIO server to display HTML/CSS/JS animations on a Smart TV, with real-time updates triggered via OBS WebSocket, StreamerBot, or REST API. Drop in new animations, trigger them remotely through WebSocket events, and create interactive displays for live streams, dashboards, or creative projects.
 
@@ -25,7 +27,13 @@ A lightweight Flask-SocketIO server to display HTML/CSS/JS animations on a Smart
 #### Accessing Your Media
 - **Smart TV**: Browse to `http://[DOCKER_HOST_IP]:8080`
 - **WebSocket**: Connect to `ws://[DOCKER_HOST_IP]:8080/socket.io/`
-- **Add Content**: Use the front end UI at `http://[DOCKER_HOST_IP]:8080/admin` to add or remove files.
+- **Admin Panel**: Access admin interface at `http://[DOCKER_HOST_IP]:8080/admin`
+
+#### 🔐 Default Admin Credentials
+- **Username:** `admin`
+- **Password:** `admin123`
+
+> ⚠️ **Security Notice:** Change the default password before production use! Edit `data/config/users.json` to update credentials.
 
 ### API Endpoints
 
