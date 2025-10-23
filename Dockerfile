@@ -16,10 +16,22 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 # Set work directory
 WORKDIR /app
 
-# Install system dependencies
+# Install system dependencies including FFmpeg for video thumbnails and Playwright browser deps
 RUN apt-get update && apt-get install -y \
     --no-install-recommends \
     curl \
+    ffmpeg \
+    libnss3 \
+    libnspr4 \
+    libatk-bridge2.0-0 \
+    libdrm2 \
+    libxkbcommon0 \
+    libgbm1 \
+    libxss1 \
+    libasound2 \
+    libcups2 \
+    libxcomposite1 \
+    libxdamage1 \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first for better Docker layer caching
@@ -29,6 +41,9 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir --upgrade pip && \
     pip install --no-cache-dir -r requirements.txt
 
+# Install Playwright (but not browsers yet)
+RUN pip install --no-cache-dir playwright
+
 # Copy application code
 COPY . .
 
@@ -36,15 +51,18 @@ COPY . .
 RUN chmod +x docker-entrypoint.sh
 
 # Create necessary directories with proper permissions
-RUN mkdir -p /app/animations /app/videos /app/data /app/data/config /app/data/logs && \
+RUN mkdir -p /app/animations /app/videos /app/data /app/data/config /app/data/logs /app/data/thumbnails && \
     chmod -R 755 /app/animations /app/videos /app/data
 
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser && \
+# Create non-root user for security  
+RUN groupadd -r appuser && useradd -r -g appuser -m appuser && \
     chown -R appuser:appuser /app
 
 # Switch to non-root user
 USER appuser
+
+# Install Playwright browsers as the correct user
+RUN playwright install chromium
 
 # Expose port
 EXPOSE 8080

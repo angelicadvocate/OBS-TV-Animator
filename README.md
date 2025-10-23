@@ -1,4 +1,4 @@
-# OBS-TV-Animator
+# OBS-TV-Animator v0.8.0
 
 > ⚠️ **This project is still in development and not production-ready.**
 
@@ -18,7 +18,25 @@ Upload and manage media entirely through the web-based admin panel, no manual fi
 
 ---
 
-## 🚀 Installation (Docker)
+## � Preview
+
+### Admin Dashboard Interface
+![Admin Dashboard](docs/images/Screenshot%202025-10-23%20140257.png)
+*Web-based admin interface for managing animations, users, and real-time triggers*
+
+### Live Animation Examples
+
+#### HTML/CSS Animation
+![HTML Animation Demo](docs/images/Recording%202025-10-23%20104808.gif)
+*Real-time HTML/CSS animations with instant switching capabilities*
+
+#### Video Animation
+![Video Animation Demo](docs/images/Recording%202025-10-23%20104711.gif)
+*Seamless video playback with WebSocket-triggered switching*
+
+---
+
+## �🚀 Installation (Docker)
 
 ### Prerequisites
 

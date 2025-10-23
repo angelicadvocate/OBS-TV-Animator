@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS-TV-Animator - OBS Studio Integration</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/OTA_favicon_round.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+    <link rel="stylesheet" href="../../static/css/admin_instructions.css">
+</head>
+<body{% if user_theme == 'dark' %} class="dark-mode"{% endif %}>
+    <div class="header-container">
+        <!-- Left Side: TV Icon and Title -->
+        <div class="header-left">
+            <i class="fas fa-tv header-icon"></i>
+            <div class="header-title">
+                <h1>OBS-TV-Animator</h1>
+                <p>OBS Studio Integration</p>
+            </div>
+        </div>
+
+        
+        <!-- Right Side: Three Rows of Buttons -->
+        <div class="header-right">
+
+            <!-- Row 1: Share Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="shareTwitter" title="Share on Twitter">
+                    <i class="fa-brands fa-twitter"></i>
+                </button>
+                <button class="btn-primary" id="shareFacebook" title="Share on Facebook">
+                    <i class="fa-brands fa-facebook"></i>
+                </button>
+                <button class="btn-primary" id="shareReddit" title="Share on Reddit">
+                    <i class="fa-brands fa-reddit"></i>
+                </button>
+                <button class="btn-primary" id="shareDiscord" title="Share on Discord">
+                    <i class="fa-brands fa-discord"></i>
+                </button>
+                <div class="user-welcome">
+                    <i class="fa-solid fa-user"></i> Welcome: {{ current_username }}
+                </div>
+            </div>
+                        
+            <!-- Row 2: Support Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="tipButton">
+                    <i class="fa-solid fa-heart"></i> Tip on Stream Elements
+                </button>
+                <button class="btn-primary" id="githubButton">
+                    <i class="fa-brands fa-github"></i> Star on GitHub
+                </button>
+            </div>
+            
+            <!-- Row 3: Admin Controls -->
+            <div class="button-row">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
+                <a href="/admin" class="btn-primary" style="text-decoration: none;" title="Dashboard">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+                <a href="/admin/instructions" class="btn-primary" style="text-decoration: none;" title="Instructions">
+                    <i class="fa-solid fa-book"></i> Instructions
+                </a>
+                <a href="/admin/users" class="btn-primary" style="text-decoration: none;" title="Manage Users">
+                    <i class="fa-solid fa-users"></i> Users
+                </a>
+                <a href="/admin/logout" class="btn-primary logout-btn" style="text-decoration: none;" title="Logout">
+                    <i class="fa-solid fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="admin-container">
+        <div class="instructions-content">
+            <!-- Navigation -->
+            <div class="card">
+                <a href="/admin/instructions" class="btn-secondary">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Instructions
+                </a>
+            </div>
+
+            <!-- OBS Integration Overview -->
+            <div class="card">
+                <h2><i class="fa-solid fa-gamepad"></i> OBS Studio Integration</h2>
+                <p>Connect OBS-TV-Animator to your OBS Studio to automatically trigger Smart TV animations when you switch scenes, start/stop streaming, or change sources.</p>
+                
+                <div class="warning-box">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    <strong>Prerequisites:</strong> Make sure your Smart TV is already connected and working before setting up OBS integration. <a href="/admin/instructions/getting-started">Complete Getting Started first →</a>
+                </div>
+            </div>
+
+            <!-- Method 1: HTTP Requests -->
+            <div class="card">
+                <h2><i class="fa-solid fa-globe"></i> Method 1: HTTP Request Automation (Recommended)</h2>
+                <p>The simplest way to integrate is using HTTP requests that can be triggered from OBS filters, StreamerBot, or other automation tools.</p>
+                
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <h4>API Endpoints</h4>
+                            <p>OBS-TV-Animator provides simple HTTP endpoints to control animations:</p>
+                            <pre class="code-block">POST http://[YOUR_IP]:8080/api/trigger
+Content-Type: application/json
+
+{
+    "animation": "anim1.html",
+    "source": "obs"
+}</pre>
+                            <p><strong>Available animations:</strong> anim1.html, anim2.html, anim3.html, anim4.html, brb.html</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <h4>Test with cURL</h4>
+                            <p>First, test that the API works from command line:</p>
+                            <pre class="code-block">curl -X POST http://[YOUR_IP]:8080/api/trigger \
+  -H "Content-Type: application/json" \
+  -d '{"animation": "anim1.html", "source": "obs"}'</pre>
+                            <p>Your Smart TV should immediately switch to the specified animation.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">3</span>
+                        <div class="step-content">
+                            <h4>OBS Advanced Scene Switcher (Free Plugin)</h4>
+                            <p>Download and install the Advanced Scene Switcher plugin:</p>
+                            <ol>
+                                <li>Download from: <a href="https://github.com/WarmUpTill/SceneSwitcher" target="_blank">GitHub - Advanced Scene Switcher</a></li>
+                                <li>Install the plugin in OBS</li>
+                                <li>Go to Tools → Advanced Scene Switcher</li>
+                                <li>Create "Macro" actions for scene changes</li>
+                                <li>Add "HTTP Request" actions that POST to your API</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Method 2: Browser Source -->
+            <div class="card">
+                <h2><i class="fa-solid fa-window-maximize"></i> Method 2: Browser Source Integration</h2>
+                <p>Add animations directly into your OBS scenes for overlay effects or testing purposes.</p>
+                
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <h4>Add Browser Source</h4>
+                            <ol>
+                                <li>In OBS, add a new <strong>Browser Source</strong> to any scene</li>
+                                <li>Set the URL to: <code>http://[YOUR_IP]:8080</code></li>
+                                <li>Set Width: 1920, Height: 1080 (or your desired resolution)</li>
+                                <li>Enable "Shutdown source when not visible"</li>
+                                <li>Enable "Refresh browser when scene becomes active"</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <h4>Synchronization</h4>
+                            <p>When you trigger animations from the admin panel:</p>
+                            <ul>
+                                <li>The Smart TV will update instantly</li>
+                                <li>The OBS Browser Source will update when you switch to that scene</li>
+                                <li>Use this for preview/testing or as an overlay element</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Method 3: Custom Script -->
+            <div class="card">
+                <h2><i class="fa-solid fa-code"></i> Method 3: Python Script Integration</h2>
+                <p>For advanced users who want custom automation logic.</p>
+                
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <h4>Example Python Script</h4>
+                            <p>Create a Python script that monitors OBS and triggers animations:</p>
+                            <pre class="code-block">import requests
+import time
+import obs_websocket_api  # pip install obs-websocket-py
+
+def trigger_animation(animation_name):
+    """Send animation trigger to OBS-TV-Animator"""
+    url = "http://[YOUR_IP]:8080/api/trigger"
+    payload = {
+        "animation": animation_name,
+        "source": "python_script"
+    }
+    try:
+        response = requests.post(url, json=payload)
+        print(f"Triggered: {animation_name} - Status: {response.status_code}")
+    except Exception as e:
+        print(f"Error triggering animation: {e}")
+
+# Monitor OBS for scene changes
+def on_scene_change(scene_name):
+    """Called when OBS scene changes"""
+    scene_animations = {
+        "Starting Soon": "anim1.html",
+        "Be Right Back": "brb.html", 
+        "Gaming": "anim2.html",
+        "Just Chatting": "anim3.html",
+        "Ending Stream": "anim4.html"
+    }
+    
+    if scene_name in scene_animations:
+        trigger_animation(scene_animations[scene_name])
+
+# Connect to OBS WebSocket and listen for events
+# Implementation depends on your OBS WebSocket library</pre>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <h4>Required Dependencies</h4>
+                            <pre class="code-block">pip install requests obs-websocket-py</pre>
+                            <p>You'll also need to enable OBS WebSocket in OBS Studio (Tools → WebSocket Server Settings).</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scene-Specific Setups -->
+            <div class="card">
+                <h2><i class="fa-solid fa-layer-group"></i> Common Scene Automation Examples</h2>
+                
+                <div class="automation-examples">
+                    <div class="example-card">
+                        <h4><i class="fa-solid fa-play"></i> Stream Starting</h4>
+                        <p><strong>Trigger:</strong> Switch to "Starting Soon" scene</p>
+                        <p><strong>Animation:</strong> anim1.html (typically intro animation)</p>
+                        <p><strong>API Call:</strong></p>
+                        <code>POST /api/trigger {"animation": "anim1.html"}</code>
+                    </div>
+
+                    <div class="example-card">
+                        <h4><i class="fa-solid fa-coffee"></i> Be Right Back</h4>
+                        <p><strong>Trigger:</strong> Switch to "BRB" scene</p>
+                        <p><strong>Animation:</strong> brb.html (break screen)</p>
+                        <p><strong>API Call:</strong></p>
+                        <code>POST /api/trigger {"animation": "brb.html"}</code>
+                    </div>
+
+                    <div class="example-card">
+                        <h4><i class="fa-solid fa-gamepad"></i> Gaming Scene</h4>
+                        <p><strong>Trigger:</strong> Switch to "Gaming" scene</p>
+                        <p><strong>Animation:</strong> anim2.html (game-themed)</p>
+                        <p><strong>API Call:</strong></p>
+                        <code>POST /api/trigger {"animation": "anim2.html"}</code>
+                    </div>
+
+                    <div class="example-card">
+                        <h4><i class="fa-solid fa-stop"></i> Stream Ending</h4>
+                        <p><strong>Trigger:</strong> Switch to "Ending" scene</p>
+                        <p><strong>Animation:</strong> anim4.html (outro animation)</p>
+                        <p><strong>API Call:</strong></p>
+                        <code>POST /api/trigger {"animation": "anim4.html"}</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Troubleshooting -->
+            <div class="card">
+                <h2><i class="fa-solid fa-wrench"></i> Integration Troubleshooting</h2>
+                
+                <div class="troubleshooting-list">
+                    <div class="trouble-item">
+                        <h4><i class="fa-solid fa-times-circle"></i> API Requests Failing</h4>
+                        <ul>
+                            <li>Check that OBS-TV-Animator is running on port 8080</li>
+                            <li>Verify the IP address is correct</li>
+                            <li>Test with cURL first before setting up automation</li>
+                            <li>Check firewall is allowing port 8080</li>
+                        </ul>
+                    </div>
+
+                    <div class="trouble-item">
+                        <h4><i class="fa-solid fa-clock"></i> Delay in Animation Changes</h4>
+                        <ul>
+                            <li>Smart TV updates should be instant</li>
+                            <li>Browser sources update when scene becomes active</li>
+                            <li>Network congestion can cause delays</li>
+                        </ul>
+                    </div>
+
+                    <div class="trouble-item">
+                        <h4><i class="fa-solid fa-plug"></i> OBS WebSocket Connection Issues</h4>
+                        <ul>
+                            <li>Ensure WebSocket server is enabled in OBS (Tools → WebSocket Server Settings)</li>
+                            <li>Check port conflicts (default is 4455)</li>
+                            <li>Verify authentication if password is set</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fa-solid fa-arrow-right"></i> Next Steps</h2>
+                <p>Once OBS integration is working, explore these advanced features:</p>
+                
+                <div class="next-steps-grid">
+                    <a href="/admin/instructions/streamerbot-integration" class="next-step-card">
+                        <i class="fa-solid fa-robot"></i>
+                        <h4>StreamerBot Integration</h4>
+                        <p>Connect to follows, donations, chat commands, and more</p>
+                    </a>
+                    
+                    <a href="/admin/manage" class="next-step-card">
+                        <i class="fa-solid fa-upload"></i>
+                        <h4>Custom Animations</h4>
+                        <p>Upload your own HTML animations and videos</p>
+                    </a>
+                    
+                    <a href="/admin/instructions/troubleshooting" class="next-step-card">
+                        <i class="fa-solid fa-question-circle"></i>
+                        <h4>Troubleshooting</h4>
+                        <p>Common issues and solutions</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <span>OBS-TV-Animator v{{ app_version }}</span>
+    </footer>
+    
+    <!-- Include Socket.IO for real-time updates -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../../static/js/global.js"></script>
+</body>
+</html>

@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS-TV-Animator - Getting Started</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/OTA_favicon_round.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+    <link rel="stylesheet" href="../../static/css/admin_instructions.css">
+</head>
+<body{% if user_theme == 'dark' %} class="dark-mode"{% endif %}>
+    <div class="header-container">
+        <!-- Left Side: TV Icon and Title -->
+        <div class="header-left">
+            <i class="fas fa-tv header-icon"></i>
+            <div class="header-title">
+                <h1>OBS-TV-Animator</h1>
+                <p>Getting Started</p>
+            </div>
+        </div>
+
+        
+        <!-- Right Side: Three Rows of Buttons -->
+        <div class="header-right">
+
+            <!-- Row 1: Share Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="shareTwitter" title="Share on Twitter">
+                    <i class="fa-brands fa-twitter"></i>
+                </button>
+                <button class="btn-primary" id="shareFacebook" title="Share on Facebook">
+                    <i class="fa-brands fa-facebook"></i>
+                </button>
+                <button class="btn-primary" id="shareReddit" title="Share on Reddit">
+                    <i class="fa-brands fa-reddit"></i>
+                </button>
+                <button class="btn-primary" id="shareDiscord" title="Share on Discord">
+                    <i class="fa-brands fa-discord"></i>
+                </button>
+                <div class="user-welcome">
+                    <i class="fa-solid fa-user"></i> Welcome: {{ current_username }}
+                </div>
+            </div>
+                        
+            <!-- Row 2: Support Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="tipButton">
+                    <i class="fa-solid fa-heart"></i> Tip on Stream Elements
+                </button>
+                <button class="btn-primary" id="githubButton">
+                    <i class="fa-brands fa-github"></i> Star on GitHub
+                </button>
+            </div>
+            
+            <!-- Row 3: Admin Controls -->
+            <div class="button-row">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
+                <a href="/admin" class="btn-primary" style="text-decoration: none;" title="Dashboard">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+                <a href="/admin/instructions" class="btn-primary" style="text-decoration: none;" title="Instructions">
+                    <i class="fa-solid fa-book"></i> Instructions
+                </a>
+                <a href="/admin/users" class="btn-primary" style="text-decoration: none;" title="Manage Users">
+                    <i class="fa-solid fa-users"></i> Users
+                </a>
+                <a href="/admin/logout" class="btn-primary logout-btn" style="text-decoration: none;" title="Logout">
+                    <i class="fa-solid fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="admin-container">
+        <div class="instructions-content">
+            <!-- Navigation -->
+            <div class="card">
+                <a href="/admin/instructions" class="btn-secondary">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Instructions
+                </a>
+            </div>
+
+            <!-- Getting Started Content -->
+            <div class="card">
+                <h2><i class="fa-solid fa-rocket"></i> Getting Started with OBS-TV-Animator</h2>
+                <p>Welcome! This guide will walk you through the basic setup process to get your Smart TV displaying animations from OBS-TV-Animator.</p>
+            </div>
+
+            <div class="card">
+                <h2><i class="fa-solid fa-tv"></i> Smart TV Setup</h2>
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <h4>Find Your Server IP Address</h4>
+                            <p>Your OBS-TV-Animator server is running at:</p>
+                            <code class="ip-display">http://[YOUR_DOCKER_HOST_IP]:8080</code>
+                            <p class="hint">Replace [YOUR_DOCKER_HOST_IP] with your actual IP address (e.g., 192.168.1.100)</p>
+                            <p><strong>To find your IP address:</strong></p>
+                            <ul>
+                                <li><strong>Windows:</strong> Open Command Prompt and run <code>ipconfig</code></li>
+                                <li><strong>macOS/Linux:</strong> Open Terminal and run <code>ifconfig</code> or <code>ip addr</code></li>
+                                <li>Look for the IP address on your local network (usually starts with 192.168 or 10.0)</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <h4>Verify Docker Container is Running</h4>
+                            <p>Before proceeding, make sure your container is running:</p>
+                            <pre class="code-block">docker ps</pre>
+                            <p>You should see <code>obs-tv-animator</code> in the list with status "Up".</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">3</span>
+                        <div class="step-content">
+                            <h4>Test Connection from Computer</h4>
+                            <p>First, test that the server is working by opening this URL in your computer's web browser:</p>
+                            <code class="ip-display">http://[YOUR_IP]:8080</code>
+                            <p>You should see an animation playing. If not, check your Docker setup and firewall settings.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">4</span>
+                        <div class="step-content">
+                            <h4>Connect Your Smart TV</h4>
+                            <p>On your Smart TV:</p>
+                            <ol>
+                                <li>Open the web browser app (available on most modern Smart TVs)</li>
+                                <li>Navigate to: <code>http://[YOUR_IP]:8080</code></li>
+                                <li>The current animation should auto-play fullscreen</li>
+                                <li>Changes will appear instantly when triggered from the admin panel</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">5</span>
+                        <div class="step-content">
+                            <h4>Test Animation Switching</h4>
+                            <p>From the Admin Dashboard:</p>
+                            <ol>
+                                <li>Go to the <strong>Available Media</strong> section</li>
+                                <li>Click "Play Now" on any animation</li>
+                                <li>Watch the TV update in real-time!</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fa-solid fa-network-wired"></i> Network Requirements</h2>
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-wifi"></i></span>
+                        <div class="step-content">
+                            <h4>Same Network Required</h4>
+                            <p>Your computer running Docker and your Smart TV must be on the same local network.</p>
+                            <p><strong>Common network issues:</strong></p>
+                            <ul>
+                                <li>TV connected to guest WiFi network</li>
+                                <li>Computer on wired connection, TV on different WiFi</li>
+                                <li>VPN blocking local network access</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-shield-alt"></i></span>
+                        <div class="step-content">
+                            <h4>Firewall Configuration</h4>
+                            <p>Ensure port 8080 is allowed through your firewall:</p>
+                            <ul>
+                                <li><strong>Windows:</strong> Windows Defender Firewall may block the port</li>
+                                <li><strong>macOS:</strong> Check System Preferences → Security & Privacy → Firewall</li>
+                                <li><strong>Router:</strong> Most home routers allow local network traffic by default</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fa-solid fa-lightbulb"></i> Next Steps</h2>
+                <p>Once your Smart TV is connected and displaying animations, you can explore these advanced features:</p>
+                
+                <div class="next-steps-grid">
+                    <a href="/admin/instructions/obs-integration" class="next-step-card">
+                        <i class="fa-solid fa-gamepad"></i>
+                        <h4>OBS Studio Integration</h4>
+                        <p>Trigger animations automatically when you switch scenes</p>
+                    </a>
+                    
+                    <a href="/admin/instructions/streamerbot-integration" class="next-step-card">
+                        <i class="fa-solid fa-robot"></i>
+                        <h4>StreamerBot Automation</h4>
+                        <p>Connect animations to follows, donations, and other events</p>
+                    </a>
+                    
+                    <a href="/admin/manage" class="next-step-card">
+                        <i class="fa-solid fa-folder"></i>
+                        <h4>Upload Custom Animations</h4>
+                        <p>Add your own HTML animations and videos</p>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <span>OBS-TV-Animator v{{ app_version }}</span>
+    </footer>
+    
+    <!-- Include Socket.IO for real-time updates -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../../static/js/global.js"></script>
+</body>
+</html>

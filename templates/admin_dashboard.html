@@ -1,9 +1,15 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OBS-TV-Animator - Admin Dashboard</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../static/assets/OTA_favicon_round.png">
+    <link rel="shortcut icon" type="image/png" href="../static/assets/OTA_favicon_round.png">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
@@ -11,7 +17,7 @@
     <link rel="stylesheet" href="../static/css/global.css">
     <link rel="stylesheet" href="../static/css/admin_dashboard.css">
 </head>
-<body{% if user_theme == 'dark' %} class="dark-mode"{% endif %}>
+<body{% if user_theme=='dark' %} class="dark-mode" {% endif %}>
     <div class="header-container">
         <!-- Left Side: TV Icon and Title -->
         <div class="header-left">
@@ -22,7 +28,7 @@
             </div>
         </div>
 
-        
+
         <!-- Right Side: Three Rows of Buttons -->
         <div class="header-right">
 
@@ -44,17 +50,17 @@
                     <i class="fa-solid fa-user"></i> Welcome: {{ current_username }}
                 </div>
             </div>
-                        
+
             <!-- Row 2: Support Buttons -->
             <div class="button-row">
                 <button class="btn-primary" id="tipButton">
                     <i class="fa-solid fa-heart"></i> Tip on Stream Elements
                 </button>
                 <button class="btn-primary" id="githubButton">
-                    <i class="fa-brands fa-github"></i> Star us on GitHub
+                    <i class="fa-brands fa-github"></i> Star on GitHub
                 </button>
             </div>
-            
+
             <!-- Row 3: Admin Controls -->
             <div class="button-row">
                 <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
@@ -72,7 +78,7 @@
             </div>
         </div>
     </div>
-    
+
     <div class="admin-container">
         {% if show_credentials_warning %}
         <!-- Default Credentials Warning -->
@@ -83,7 +89,8 @@
                 </div>
                 <div class="warning-text">
                     <h4>Security Notice</h4>
-                    <p>You're logged in with default credentials. For security, we strongly recommend updating your username and password in the <a href="/admin/users">User Management</a> section.</p>
+                    <p>You're logged in with default credentials. For security, we strongly recommend updating your
+                        username and password in the <a href="/admin/users">User Management</a> section.</p>
                 </div>
                 <button class="warning-close" onclick="closeWarning()" title="Dismiss Warning">
                     <i class="fa-solid fa-times"></i>
@@ -91,31 +98,42 @@
             </div>
         </div>
         {% endif %}
-        
+
         <div class="dashboard-grid">
-            <!-- Server Status Card -->
+            <!-- Server Status Grid (2x3) -->
             <div class="card">
                 <h3><i class="fa-solid fa-chart-simple"></i> Server Status</h3>
-                <div class="status-grid">
+                <div class="status-grid-2x3">
                     <div class="status-item">
                         <div class="status-value" id="totalFiles">-</div>
                         <div class="status-label">Total Files</div>
                     </div>
                     <div class="status-item">
                         <div class="status-value" id="connectedClients">-</div>
-                        <div class="status-label">Connected Devices</div>
+                        <div class="status-label">Connected Displays</div>
                     </div>
                     <div class="status-item">
                         <div class="status-value" id="animationCount">-</div>
                         <div class="status-label">Animations</div>
                     </div>
                     <div class="status-item">
+                        <div class="status-value" id="websocketCount">-</div>
+                        <div class="status-label">Connected WebSockets</div>
+                    </div>
+                    <div class="status-item">
                         <div class="status-value" id="videoCount">-</div>
                         <div class="status-label">Videos</div>
                     </div>
+                    <div class="status-item">
+                        <div class="connection-status">
+                            <span class="status-indicator">●</span>
+                            <span id="connectionStatus">Connecting...</span>
+                        </div>
+                        <div class="status-label">Server Connection</div>
+                    </div>
                 </div>
             </div>
-            
+
             <!-- Current Media Card -->
             <div class="card">
                 <h3><i class="fa-solid fa-play"></i> Current Media</h3>
@@ -125,26 +143,50 @@
                 </div>
                 <h3><i class="fa-solid fa-wifi"></i> Connected Devices</h3>
                 <div class="devices-list">
-                    <div id="connectedDevicesList">
-                        <div class="connected-devices">
-                            <span class="device-indicator"></span>
-                            <span id="deviceStatus">Loading devices...</span>
+                    <!-- TV Devices -->
+                    <div class="device-section">
+                        <div class="device-type-header">
+                            <i class="fa-solid fa-tv"></i>
+                            <span>TV/Displays</span>
+                        </div>
+                        <div id="tvDevicesList">
+                            <div class="connected-devices">
+                                <span class="device-indicator"></span>
+                                <span id="tvDeviceStatus">Loading...</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- StreamerBot Connections -->
+                    <div class="device-section">
+                        <div class="device-type-header">
+                            <i class="fa-solid fa-robot"></i>
+                            <span>StreamerBot</span>
+                        </div>
+                        <div id="streamerbotDevicesList">
+                            <div class="connected-devices">
+                                <span class="device-indicator disconnected" id="streamerbotIndicator"></span>
+                                <span id="streamerbotStatus">Not Connected</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- OBS Studio Connections -->
+                    <div class="device-section">
+                        <div class="device-type-header">
+                            <i class="fa-solid fa-video"></i>
+                            <span>OBS Studio</span>
+                        </div>
+                        <div id="obsDevicesList">
+                            <div class="connected-devices">
+                                <span class="device-indicator disconnected" id="obsIndicator"></span>
+                                <span id="obsStatus">Not Connected</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            
-            <!-- Quick Actions Card -->
-            <div class="card quick-actions">
-                <h3><i class="fa-solid fa-bolt"></i> Quick Actions</h3>
-                <div class="actions-grid">
-                    <a href="/admin/manage" class="button"><i class="fa-solid fa-folder"></i> Manage Files</a>
-                    <button class="button secondary" onclick="refreshStatus()"><i class="fa-solid fa-rotate-right"></i> Refresh Status</button>
-                    <button class="button secondary" onclick="openTVView()"><i class="fa-solid fa-tv"></i> Open TV View</button>
-                    <button class="button danger" onclick="showRestartDialog()"><i class="fa-solid fa-power-off"></i> Restart Server</button>
-                </div>
-            </div>
-            
+
             <!-- Available Media Card -->
             <div class="card">
                 <h3><i class="fa-solid fa-th"></i> Available Media</h3>
@@ -152,20 +194,59 @@
                     <div style="text-align: center; opacity: 0.6;">Loading media files...</div>
                 </div>
             </div>
+
+            <!-- Quick Actions Card -->
+            <div class="card quick-actions">
+                <h3><i class="fa-solid fa-bolt"></i> Quick Actions</h3>
+                <div class="actions-grid">
+                    <a href="/admin/manage" class="button"><i class="fa-solid fa-folder"></i> Manage Files</a>
+                    <a href="/admin/instructions" class="button secondary"><i class="fa-solid fa-book"></i>
+                        Setup/Instructions</a>
+                    <button class="button secondary" onclick="openTVView()"><i class="fa-solid fa-tv"></i> Open TV
+                        View</button>
+                    <a href="/admin/users" class="button secondary"><i class="fa-solid fa-users"></i> Manage Users</a>
+                    <button class="button danger" onclick="showRestartDialog()"><i class="fa-solid fa-power-off"></i>
+                        Restart Server</button>
+                </div>
+            </div>
         </div>
     </div>
-    
+
     <button class="refresh-btn" onclick="refreshStatus()" title="Refresh Dashboard">
         <i class="fa-solid fa-rotate-right"></i>
     </button>
-    
+
     <div class="mascot-corner">
-        <img src="../static/assets/mascot.png" alt="OBS-TV-Animator Mascot" class="floating-mascot" />
+        <img src="../static/assets/mascot.png" alt="OBS-TV-Animator Mascot" class="floating-mascot"
+            popovertarget="mascot-message" style="cursor: pointer;" />
+
+        <!-- Popover Easter Egg -->
+        <div id="mascot-message" popover="auto" class="mascot-popover">
+            <div class="popover-header">
+                <span class="popover-title">🎉 Thanks for using OBS-TV-Animator!</span>
+                <button class="popover-close" popovertarget="mascot-message" popovertargetaction="hide">×</button>
+            </div>
+            <div class="popover-content">
+                <p>Hey there, explorer! 👋 Angelito here and you've discovered my hidden message!</p>
+                <p><strong>Thank you</strong> for giving this project a try - your curiosity and creativity are what
+                    keep it growing. Every person who takes a chance on it helps shape where it goes next, and that
+                    means a lot. 💛</p>
+                <p><em>I hope this tool helps you bring your ideas to life and inspires you to keep building, streaming,
+                        and creating amazing things!</em></p>
+            </div>
+
+        </div>
     </div>
-    
+
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <span>OBS-TV-Animator v{{ app_version }}</span>
+    </footer>
+
     <!-- Include Socket.IO for real-time updates -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <script src="../static/js/global.js"></script>
     <script src="../static/js/admin_dashboard.js"></script>
-</body>
+    </body>
+
 </html>

@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  obs-tv-animator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: obs-tv-animator-dev
+    restart: unless-stopped
+    labels:
+      - "version=0.8.0-dev"
+    ports:
+      - "8081:8080"
+    volumes:
+      # ===== DEVELOPMENT HOT RELOAD VOLUMES =====
+      # Mount ALL source files for live editing
+      - ./app.py:/app/app.py
+      - ./templates:/app/templates
+      - ./static:/app/static
+      
+      # Media directories (read-only for safety)
+      - ./animations:/app/animations:ro
+      - ./videos:/app/videos:ro
+      
+      # Data directory for persistent state
+      - ./data:/app/data
+      
+      # Optional: Mount requirements.txt if you need to add packages
+      - ./requirements.txt:/app/requirements.txt:ro
+    environment:
+      # ===== DEVELOPMENT ENVIRONMENT =====
+      - FLASK_ENV=development
+      - FLASK_DEBUG=1
+      - PORT=8080
+      - PYTHONUNBUFFERED=1
+      # Enable hot reload
+      - FLASK_RUN_HOST=0.0.0.0
+      - FLASK_RUN_PORT=8080
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    # Override command to use Flask development server with auto-reload
+    command: ["python", "-m", "flask", "run", "--host=0.0.0.0", "--port=8080", "--debug", "--reload"]

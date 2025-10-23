@@ -138,18 +138,20 @@ class FileManager {
         
         filesGrid.innerHTML = filteredFiles.map(file => `
             <div class="file-card">
-                <div class="file-thumbnail">
-                    <img src="${file.thumbnail}" alt="${file.name}" 
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="file-placeholder" style="display: none;">
-                        <i class="fa-solid ${file.type === 'video' ? 'fa-video' : 'fa-file'}"></i>
+                <div class="file-left">
+                    <div class="file-thumbnail">
+                        <img src="${file.thumbnail}" alt="${file.name}" 
+                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <div class="file-placeholder" style="display: none;">
+                            <i class="fa-solid ${file.type === 'video' ? 'fa-video' : 'fa-file'}"></i>
+                        </div>
                     </div>
-                </div>
-                <div class="file-info">
-                    <div class="file-name">${file.name}</div>
-                    <div class="file-meta">
-                        <span class="file-type ${file.type}">${file.type}</span>
-                        <span>${this.formatFileSize(file.size)}</span>
+                    <div class="file-info">
+                        <div class="file-name">${file.name}</div>
+                        <div class="file-meta">
+                            <span class="file-type ${file.type}">${file.type}</span>
+                            <span>${this.formatFileSize(file.size)}</span>
+                        </div>
                     </div>
                 </div>
                 <div class="file-actions">
@@ -158,6 +160,12 @@ class FileManager {
                     </button>
                     <button class="action-btn delete-btn" onclick="fileManager.deleteFile('${file.type}', '${file.name}')">
                         <i class="fa-solid fa-trash"></i> Delete
+                    </button>
+                    <button class="action-btn streamerbot-btn" onclick="fileManager.copyStreamerbotCS('${file.name}')" title="Copy StreamerBot C# code to clipboard">
+                        <i class="fa-solid fa-code"></i> StreamerBot C#
+                    </button>
+                    <button class="action-btn streamerbot-btn" onclick="fileManager.copyStreamerbotHTTP('${file.name}')" title="Copy StreamerBot HTTP URL to clipboard">
+                        <i class="fa-solid fa-link"></i> StreamerBot HTTP
                     </button>
                 </div>
             </div>
@@ -232,6 +240,180 @@ class FileManager {
         const i = Math.floor(Math.log(bytes) / Math.log(k));
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
+    
+    copyStreamerbotCS(filename) {
+        const csCode = `using System;
+using System.Net.Http;
+using System.Text;
+
+public class CPHInline
+{
+    public bool Execute()
+    {
+        CPH.LogInfo("Starting animation trigger...");
+        
+        try
+        {
+            using (var client = new HttpClient())
+            {
+                client.Timeout = TimeSpan.FromSeconds(5);
+                
+                var url = "http://localhost:8080/trigger";
+                var json = "{\\"animation\\":\\"${filename}\\"}";
+                var content = new StringContent(json, Encoding.UTF8, "application/json");
+
+                CPH.LogInfo($"Sending POST to: {url}");
+                
+                var response = client.PostAsync(url, content).Result;
+                
+                if (response.IsSuccessStatusCode)
+                {
+                    var responseBody = response.Content.ReadAsStringAsync().Result;
+                    CPH.LogInfo($"SUCCESS: {responseBody}");
+                    return true;
+                }
+                else
+                {
+                    CPH.LogError($"FAILED: {response.StatusCode} - {response.ReasonPhrase}");
+                    return false;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            CPH.LogError($"ERROR: {ex.Message}");
+            return false;
+        }
+    }
+}`;
+
+        this.copyToClipboard(csCode, `StreamerBot C# code for ${filename}`);
+    }
+    
+    copyStreamerbotHTTP(filename) {
+        const httpUrl = `http://localhost:8080/trigger?animation=${filename}`;
+        this.copyToClipboard(httpUrl, `StreamerBot HTTP URL for ${filename}`);
+    }
+    
+    copyToClipboard(text, description) {
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(text).then(() => {
+                this.showNotification(`✅ ${description} copied to clipboard!`, 'success');
+            }).catch(() => {
+                this.fallbackCopyToClipboard(text, description);
+            });
+        } else {
+            this.fallbackCopyToClipboard(text, description);
+        }
+    }
+    
+    fallbackCopyToClipboard(text, description) {
+        const textArea = document.createElement('textarea');
+        textArea.value = text;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            this.showNotification(`✅ ${description} copied to clipboard!`, 'success');
+        } catch (err) {
+            this.showNotification(`❌ Failed to copy ${description}. Please try again.`, 'error');
+        } finally {
+            document.body.removeChild(textArea);
+        }
+    }
+    
+    showNotification(message, type = 'info') {
+        const notification = document.getElementById('notification');
+        if (notification) {
+            notification.textContent = message;
+            notification.className = `notification ${type} show`;
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000);
+        } else {
+            // Fallback to alert if notification system isn't available
+            alert(message);
+        }
+    }
+    
+    // Thumbnail Management Functions
+    async generateAllThumbnails() {
+        const button = document.getElementById('generateThumbnailsBtn');
+        const originalText = button.innerHTML;
+        
+        try {
+            // Disable button and show loading
+            button.disabled = true;
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Generating...';
+            
+            const response = await fetch('/admin/api/thumbnails/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                this.showNotification('✅ Thumbnail generation started! This may take a few minutes.', 'success');
+                
+                // Auto-refresh status after a delay
+                setTimeout(() => {
+                    this.checkThumbnailStatus();
+                }, 5000);
+            } else {
+                this.showNotification(`❌ Failed to start thumbnail generation: ${result.error}`, 'error');
+            }
+        } catch (error) {
+            this.showNotification(`❌ Error generating thumbnails: ${error.message}`, 'error');
+        } finally {
+            // Re-enable button
+            button.disabled = false;
+            button.innerHTML = originalText;
+        }
+    }
+    
+    async checkThumbnailStatus() {
+        const statusDiv = document.getElementById('thumbnailStatus');
+        const button = document.getElementById('thumbnailStatusBtn');
+        const originalText = button.innerHTML;
+        
+        try {
+            // Show loading state
+            button.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking...';
+            
+            const response = await fetch('/admin/api/thumbnails/status');
+            const status = await response.json();
+            
+            if (response.ok) {
+                // Update status display
+                document.getElementById('totalFiles').textContent = status.total_files;
+                document.getElementById('htmlFiles').textContent = status.html_files;
+                document.getElementById('videoFiles').textContent = status.video_files;
+                document.getElementById('thumbnailCount').textContent = status.thumbnail_count;
+                document.getElementById('completionPercentage').textContent = status.completion_percentage + '%';
+                
+                // Show the status section
+                statusDiv.style.display = 'block';
+                
+                this.showNotification('✅ Thumbnail status updated!', 'success');
+            } else {
+                this.showNotification(`❌ Failed to get thumbnail status: ${status.error}`, 'error');
+            }
+        } catch (error) {
+            this.showNotification(`❌ Error checking thumbnail status: ${error.message}`, 'error');
+        } finally {
+            // Reset button
+            button.innerHTML = originalText;
+        }
+    }
 }
 
 // Global functions for button clicks
@@ -245,36 +427,25 @@ function filterFiles(filter) {
     fileManager.filterFiles(filter);
 }
 
-// Dark Mode Functions
-function toggleDarkMode() {
-    const body = document.body;
-    const themeIcon = document.getElementById('themeIcon');
-    
-    body.classList.toggle('dark-mode');
-    
-    if (body.classList.contains('dark-mode')) {
-        themeIcon.className = 'fa-solid fa-sun';
-        localStorage.setItem('darkMode', 'enabled');
-    } else {
-        themeIcon.className = 'fa-solid fa-moon';
-        localStorage.setItem('darkMode', 'disabled');
-    }
-}
+// Theme functions are handled by global.js
 
-function initializeDarkMode() {
-    const darkMode = localStorage.getItem('darkMode');
-    const body = document.body;
-    const themeIcon = document.getElementById('themeIcon');
-    
-    if (darkMode === 'enabled') {
-        body.classList.add('dark-mode');
-        if (themeIcon) {
-            themeIcon.className = 'fa-solid fa-sun';
-        }
-    }
-}
-
-// Initialize dark mode on page load
+// Initialize page on load
 document.addEventListener('DOMContentLoaded', () => {
-    initializeDarkMode();
+    // Theme initialization is handled by global.js
+    
+    // Initialize thumbnail management buttons
+    const generateBtn = document.getElementById('generateThumbnailsBtn');
+    const statusBtn = document.getElementById('thumbnailStatusBtn');
+    
+    if (generateBtn) {
+        generateBtn.addEventListener('click', () => {
+            fileManager.generateAllThumbnails();
+        });
+    }
+    
+    if (statusBtn) {
+        statusBtn.addEventListener('click', () => {
+            fileManager.checkThumbnailStatus();
+        });
+    }
 });

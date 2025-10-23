@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS-TV-Animator - Troubleshooting & FAQ</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/OTA_favicon_round.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+    <link rel="stylesheet" href="../../static/css/admin_instructions.css">
+</head>
+<body{% if user_theme == 'dark' %} class="dark-mode"{% endif %}>
+    <div class="header-container">
+        <!-- Left Side: TV Icon and Title -->
+        <div class="header-left">
+            <i class="fas fa-tv header-icon"></i>
+            <div class="header-title">
+                <h1>OBS-TV-Animator</h1>
+                <p>Troubleshooting & FAQ</p>
+            </div>
+        </div>
+
+        
+        <!-- Right Side: Three Rows of Buttons -->
+        <div class="header-right">
+
+            <!-- Row 1: Share Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="shareTwitter" title="Share on Twitter">
+                    <i class="fa-brands fa-twitter"></i>
+                </button>
+                <button class="btn-primary" id="shareFacebook" title="Share on Facebook">
+                    <i class="fa-brands fa-facebook"></i>
+                </button>
+                <button class="btn-primary" id="shareReddit" title="Share on Reddit">
+                    <i class="fa-brands fa-reddit"></i>
+                </button>
+                <button class="btn-primary" id="shareDiscord" title="Share on Discord">
+                    <i class="fa-brands fa-discord"></i>
+                </button>
+                <div class="user-welcome">
+                    <i class="fa-solid fa-user"></i> Welcome: {{ current_username }}
+                </div>
+            </div>
+                        
+            <!-- Row 2: Support Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="tipButton">
+                    <i class="fa-solid fa-heart"></i> Tip on Stream Elements
+                </button>
+                <button class="btn-primary" id="githubButton">
+                    <i class="fa-brands fa-github"></i> Star on GitHub
+                </button>
+            </div>
+            
+            <!-- Row 3: Admin Controls -->
+            <div class="button-row">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
+                <a href="/admin" class="btn-primary" style="text-decoration: none;" title="Dashboard">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+                <a href="/admin/instructions" class="btn-primary" style="text-decoration: none;" title="Instructions">
+                    <i class="fa-solid fa-book"></i> Instructions
+                </a>
+                <a href="/admin/users" class="btn-primary" style="text-decoration: none;" title="Manage Users">
+                    <i class="fa-solid fa-users"></i> Users
+                </a>
+                <a href="/admin/logout" class="btn-primary logout-btn" style="text-decoration: none;" title="Logout">
+                    <i class="fa-solid fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="admin-container">
+        <div class="instructions-content">
+            <!-- Navigation -->
+            <div class="card">
+                <a href="/admin/instructions" class="btn-secondary">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Instructions
+                </a>
+            </div>
+
+            <!-- Quick Diagnostics -->
+            <div class="card">
+                <h2><i class="fa-solid fa-stethoscope"></i> Quick Diagnostics</h2>
+                <p>Start here to quickly identify common issues:</p>
+                
+                <div class="diagnostic-checks">
+                    <div class="diagnostic-item">
+                        <label>
+                            <input type="checkbox" class="diagnostic-checkbox" data-relates-to="docker,server">
+                            <span class="checkmark"></span>
+                            Docker container is running (<code>docker ps</code> shows obs-tv-animator)
+                        </label>
+                    </div>
+                    
+                    <div class="diagnostic-item">
+                        <label>
+                            <input type="checkbox" class="diagnostic-checkbox" data-relates-to="docker,server,network">
+                            <span class="checkmark"></span>
+                            Admin panel loads at http://[YOUR_IP]:8080/admin
+                        </label>
+                    </div>
+                    
+                    <div class="diagnostic-item">
+                        <label>
+                            <input type="checkbox" class="diagnostic-checkbox" data-relates-to="server,network">
+                            <span class="checkmark"></span>
+                            Animation plays in computer browser at http://[YOUR_IP]:8080
+                        </label>
+                    </div>
+                    
+                    <div class="diagnostic-item">
+                        <label>
+                            <input type="checkbox" class="diagnostic-checkbox" data-relates-to="network,smart-tv">
+                            <span class="checkmark"></span>
+                            Smart TV and computer are on the same WiFi network
+                        </label>
+                    </div>
+                    
+                    <div class="diagnostic-item">
+                        <label>
+                            <input type="checkbox" class="diagnostic-checkbox" data-relates-to="smart-tv,network">
+                            <span class="checkmark"></span>
+                            Smart TV can access the internet (YouTube, Netflix work)
+                        </label>
+                    </div>
+                    
+                    <div class="diagnostic-item advanced-diagnostic" style="display: none;">
+                        <label>
+                            <input type="checkbox" class="diagnostic-checkbox" data-relates-to="integration">
+                            <span class="checkmark"></span>
+                            OBS integration is working (scene changes trigger animations)
+                        </label>
+                    </div>
+                    
+                    <div class="diagnostic-item advanced-diagnostic" style="display: none;">
+                        <label>
+                            <input type="checkbox" class="diagnostic-checkbox" data-relates-to="integration">
+                            <span class="checkmark"></span>
+                            StreamerBot integration is working (events trigger animations)
+                        </label>
+                    </div>
+                    
+                    <div class="diagnostic-item advanced-diagnostic" style="display: none;">
+                        <label>
+                            <input type="checkbox" class="diagnostic-checkbox" data-relates-to="performance">
+                            <span class="checkmark"></span>
+                            Animations play smoothly without lag or stuttering
+                        </label>
+                    </div>
+                    
+                    <div class="diagnostic-item advanced-diagnostic" style="display: none;">
+                        <label>
+                            <input type="checkbox" class="diagnostic-checkbox" data-relates-to="files">
+                            <span class="checkmark"></span>
+                            File uploads work through the admin panel
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="diagnostic-controls" style="margin-top: 15px;">
+                    <button id="toggleAdvanced" class="btn-secondary" style="padding: 8px 16px; font-size: 14px;">
+                        <i class="fa-solid fa-plus"></i> Show Advanced Diagnostics
+                    </button>
+                    <button id="resetDiagnostic" class="btn-secondary" style="padding: 8px 16px; font-size: 14px; margin-left: 10px;">
+                        <i class="fa-solid fa-undo"></i> Reset All
+                    </button>
+                </div>
+                
+                <div id="diagnostic-results" class="diagnostic-results" style="display: none;">
+                    <div id="all-good" class="success-message" style="display: none;">
+                        <i class="fa-solid fa-check-circle"></i>
+                        <strong>All systems appear to be working!</strong> If you're still having issues, check the specific problems below.
+                    </div>
+                    <div id="has-issues" class="warning-message" style="display: none;">
+                        <i class="fa-solid fa-exclamation-triangle"></i>
+                        <strong>Issues detected.</strong> Please check the troubleshooting sections below that correspond to your unchecked items.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Docker Issues -->
+            <div class="card troubleshooting-section" data-issue-type="docker,server">
+                <h2><i class="fa-brands fa-docker"></i> Docker & Server Issues</h2>
+                
+                <div class="faq-section">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>Container won't start or crashes immediately</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Check logs:</strong></p>
+                            <pre class="code-block">docker logs obs-tv-animator</pre>
+                            
+                            <p><strong>Common solutions:</strong></p>
+                            <ul>
+                                <li>Port 8080 might be in use by another application</li>
+                                <li>Insufficient Docker resources (increase memory/CPU limits)</li>
+                                <li>Corrupted data volume - try removing and recreating</li>
+                                <li>Missing required files in the mounted volume</li>
+                            </ul>
+                            
+                            <p><strong>Reset container:</strong></p>
+                            <pre class="code-block">docker-compose down
+docker-compose up -d --force-recreate</pre>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>Port 8080 already in use</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Find what's using the port:</strong></p>
+                            <pre class="code-block"># Windows
+netstat -ano | findstr :8080
+
+# macOS/Linux
+lsof -i :8080</pre>
+                            
+                            <p><strong>Change the port:</strong> Edit docker-compose.yml and change "8080:8080" to "8081:8080", then use port 8081 in your URLs.</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>Admin panel shows "Internal Server Error"</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Check permissions and file structure:</strong></p>
+                            <ul>
+                                <li>Ensure all required directories exist (data/, templates/, static/)</li>
+                                <li>Check file permissions on mounted volumes</li>
+                                <li>Verify users.json exists and is valid JSON</li>
+                                <li>Look at container logs for Python traceback</li>
+                            </ul>
+                            
+                            <p><strong>Reset configuration:</strong></p>
+                            <pre class="code-block">docker exec -it obs-tv-animator ls -la /app/data/
+docker exec -it obs-tv-animator cat /app/data/config/users.json</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Issues -->
+            <div class="card troubleshooting-section" data-issue-type="network">
+                <h2><i class="fa-solid fa-wifi"></i> Network & Connection Issues</h2>
+                
+                <div class="faq-section">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>Smart TV can't reach the server</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Verify network connectivity:</strong></p>
+                            <ol>
+                                <li><strong>Same network:</strong> Ensure TV and computer are on the same WiFi/network</li>
+                                <li><strong>IP address:</strong> Double-check your computer's IP address hasn't changed</li>
+                                <li><strong>Firewall:</strong> Temporarily disable firewall to test connectivity</li>
+                                <li><strong>Router settings:</strong> Some routers block device-to-device communication</li>
+                            </ol>
+                            
+                            <p><strong>Test from another device:</strong> Try accessing the URL from your phone on the same WiFi.</p>
+                            
+                            <p><strong>Common router issues:</strong></p>
+                            <ul>
+                                <li>Guest network isolation enabled</li>
+                                <li>AP isolation blocking device communication</li>
+                                <li>Dual-band issues (2.4GHz vs 5GHz networks)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>How to find my IP address?</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Windows:</strong></p>
+                            <pre class="code-block">ipconfig</pre>
+                            
+                            <p><strong>macOS:</strong></p>
+                            <pre class="code-block">ifconfig | grep "inet "</pre>
+                            
+                            <p><strong>Linux:</strong></p>
+                            <pre class="code-block">ip addr show</pre>
+                            
+                            <p>Look for an IP starting with 192.168.x.x or 10.x.x.x (your local network IP).</p>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>Firewall blocking connections</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Windows Firewall:</strong></p>
+                            <ol>
+                                <li>Windows Security → Firewall & network protection</li>
+                                <li>Advanced settings → Inbound Rules → New Rule</li>
+                                <li>Port → TCP → 8080 → Allow the connection</li>
+                            </ol>
+                            
+                            <p><strong>macOS Firewall:</strong></p>
+                            <ol>
+                                <li>System Preferences → Security & Privacy → Firewall</li>
+                                <li>Firewall Options → Add Docker or allow incoming connections</li>
+                            </ol>
+                            
+                            <p><strong>Quick test:</strong> Temporarily disable firewall, test connection, then re-enable and add proper rule.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Smart TV Issues -->
+            <div class="card troubleshooting-section" data-issue-type="smart-tv">
+                <h2><i class="fa-solid fa-tv"></i> Smart TV Issues</h2>
+                
+                <div class="faq-section">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>TV browser doesn't support animations</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Browser compatibility issues:</strong></p>
+                            <ul>
+                                <li>Older Smart TVs have limited HTML5/CSS3 support</li>
+                                <li>Some animations may not work on all TV browsers</li>
+                                <li>JavaScript features might be restricted</li>
+                            </ul>
+                            
+                            <p><strong>Solutions:</strong></p>
+                            <ul>
+                                <li>Try simpler animations (basic CSS transforms instead of complex effects)</li>
+                                <li>Use video files instead of HTML animations</li>
+                                <li>Consider using a streaming device (Chromecast, Fire TV Stick) with a modern browser</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>TV doesn't update animations in real-time</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>TV browser caching issues:</strong></p>
+                            <ul>
+                                <li>Clear TV browser cache and cookies</li>
+                                <li>Force refresh the page (if TV browser supports it)</li>
+                                <li>Close and reopen the browser app</li>
+                                <li>Restart the TV</li>
+                            </ul>
+                            
+                            <p><strong>Network delay:</strong></p>
+                            <ul>
+                                <li>WiFi signal strength to TV might be weak</li>
+                                <li>TV might have slower network adapter</li>
+                                <li>Router congestion during peak usage</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>TV shows error or blank page</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Check TV browser compatibility:</strong></p>
+                            <ul>
+                                <li>Try accessing a simple website (like Google) first</li>
+                                <li>Ensure TV browser can handle HTML5 video and CSS3</li>
+                                <li>Some TVs have outdated browsers that can't handle modern web content</li>
+                            </ul>
+                            
+                            <p><strong>Alternative solutions:</strong></p>
+                            <ul>
+                                <li>Use a Chromecast or Fire TV Stick for better browser support</li>
+                                <li>Connect a laptop/computer directly to TV via HDMI</li>
+                                <li>Use the OBS browser source for preview while streaming</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Integration Issues -->
+            <div class="card troubleshooting-section" data-issue-type="integration">
+                <h2><i class="fa-solid fa-plug"></i> OBS & StreamerBot Integration Issues</h2>
+                
+                <div class="faq-section">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>OBS Browser Source not updating</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Browser source settings:</strong></p>
+                            <ul>
+                                <li>Enable "Shutdown source when not visible"</li>
+                                <li>Enable "Refresh browser when scene becomes active"</li>
+                                <li>Set appropriate Width/Height (1920x1080)</li>
+                                <li>Try manually refreshing the browser source</li>
+                            </ul>
+                            
+                            <p><strong>If still not updating:</strong></p>
+                            <ul>
+                                <li>Remove and re-add the browser source</li>
+                                <li>Check if hardware acceleration is causing issues</li>
+                                <li>Verify the URL is correct and accessible</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>StreamerBot HTTP requests failing</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Debug steps:</strong></p>
+                            <ol>
+                                <li>Test the API endpoint manually with cURL or Postman</li>
+                                <li>Check StreamerBot logs for error messages</li>
+                                <li>Verify JSON formatting in the request body</li>
+                                <li>Ensure the correct Content-Type header (application/json)</li>
+                            </ol>
+                            
+                            <p><strong>Common mistakes:</strong></p>
+                            <ul>
+                                <li>Wrong IP address or port in URL</li>
+                                <li>Invalid JSON syntax (missing quotes, commas)</li>
+                                <li>Network connectivity issues</li>
+                                <li>Server not responding (check Docker container status)</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>Events trigger but animations don't change</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Verify API calls:</strong></p>
+                            <ul>
+                                <li>Check admin dashboard logs for incoming requests</li>
+                                <li>Verify the animation name in the request matches available files</li>
+                                <li>Ensure the Smart TV is still connected and responsive</li>
+                            </ul>
+                            
+                            <p><strong>Test sequence:</strong></p>
+                            <ol>
+                                <li>Manual animation change from admin panel works</li>
+                                <li>cURL request to API works</li>
+                                <li>StreamerBot manual trigger works</li>
+                                <li>StreamerBot automatic trigger works</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Performance Issues -->
+            <div class="card troubleshooting-section" data-issue-type="performance">
+                <h2><i class="fa-solid fa-tachometer-alt"></i> Performance Issues</h2>
+                
+                <div class="faq-section">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>Animations are laggy or stuttering</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>TV hardware limitations:</strong></p>
+                            <ul>
+                                <li>Older Smart TVs have limited processing power</li>
+                                <li>Complex CSS animations may be too demanding</li>
+                                <li>Multiple simultaneous effects can cause stuttering</li>
+                            </ul>
+                            
+                            <p><strong>Optimization tips:</strong></p>
+                            <ul>
+                                <li>Use simpler animations with fewer elements</li>
+                                <li>Prefer CSS transforms over position changes</li>
+                                <li>Use video files for complex animations</li>
+                                <li>Reduce animation duration and complexity</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>High CPU usage from Docker container</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Resource management:</strong></p>
+                            <ul>
+                                <li>Limit Docker container resources in docker-compose.yml</li>
+                                <li>Check for infinite loops in custom animations</li>
+                                <li>Monitor logs for excessive processing</li>
+                                <li>Ensure efficient polling intervals</li>
+                            </ul>
+                            
+                            <p><strong>Example resource limits:</strong></p>
+                            <pre class="code-block">services:
+  obs-tv-animator:
+    # ... other config
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File & Upload Issues -->
+            <div class="card troubleshooting-section" data-issue-type="files">
+                <h2><i class="fa-solid fa-file-upload"></i> File Upload & Custom Animation Issues</h2>
+                
+                <div class="faq-section">
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>Can't upload files through admin panel</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>Check permissions and storage:</strong></p>
+                            <ul>
+                                <li>Verify Docker volume mount permissions</li>
+                                <li>Check available disk space on host system</li>
+                                <li>Ensure upload directory exists and is writable</li>
+                                <li>File size limits (check if file is too large)</li>
+                            </ul>
+                            
+                            <p><strong>Debug upload permissions:</strong></p>
+                            <pre class="code-block">docker exec -it obs-tv-animator ls -la /app/animations/
+docker exec -it obs-tv-animator ls -la /app/videos/</pre>
+                        </div>
+                    </div>
+
+                    <div class="faq-item">
+                        <div class="faq-question">
+                            <i class="fa-solid fa-question-circle"></i>
+                            <strong>Custom animations don't work on Smart TV</strong>
+                        </div>
+                        <div class="faq-answer">
+                            <p><strong>HTML/CSS compatibility:</strong></p>
+                            <ul>
+                                <li>Smart TV browsers don't support all modern web features</li>
+                                <li>Avoid using latest JavaScript ES6+ features</li>
+                                <li>Use basic CSS animations instead of complex libraries</li>
+                                <li>Test animations on older browsers first</li>
+                            </ul>
+                            
+                            <p><strong>Recommended approach:</strong></p>
+                            <ul>
+                                <li>Use simple CSS keyframe animations</li>
+                                <li>Avoid external dependencies when possible</li>
+                                <li>Test on multiple devices before using live</li>
+                                <li>Consider using video files for complex effects</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recovery Procedures -->
+            <div class="card">
+                <h2><i class="fa-solid fa-undo"></i> Emergency Recovery</h2>
+                
+                <div class="recovery-section">
+                    <div class="recovery-item">
+                        <h4><i class="fa-solid fa-exclamation-triangle"></i> Complete Reset</h4>
+                        <p>If everything is broken and you need to start fresh:</p>
+                        <pre class="code-block">docker-compose down
+docker volume rm obs-tv-animator_data
+docker-compose up -d</pre>
+                        <p class="warning-text">⚠️ This will delete all user accounts, settings, and uploaded files!</p>
+                    </div>
+
+                    <div class="recovery-item">
+                        <h4><i class="fa-solid fa-database"></i> Backup Important Data</h4>
+                        <p>Before making major changes, backup your configuration:</p>
+                        <pre class="code-block">docker cp obs-tv-animator:/app/data ./backup-data-$(date +%Y%m%d)</pre>
+                    </div>
+
+                    <div class="recovery-item">
+                        <h4><i class="fa-solid fa-history"></i> Restore from Backup</h4>
+                        <p>To restore from a backup:</p>
+                        <pre class="code-block">docker-compose down
+docker cp ./backup-data-YYYYMMDD/. obs-tv-animator:/app/data/
+docker-compose up -d</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Getting Help -->
+            <div class="card">
+                <h2><i class="fa-solid fa-life-ring"></i> Getting More Help</h2>
+                
+                <div class="help-section">
+                    <div class="help-item">
+                        <h4><i class="fa-brands fa-github"></i> GitHub Issues</h4>
+                        <p>For bugs, feature requests, or technical questions:</p>
+                        <a href="https://github.com/dalto8/obs-tv-animator/issues" target="_blank" class="btn-primary">
+                            <i class="fa-solid fa-external-link-alt"></i> Report an Issue
+                        </a>
+                    </div>
+
+                    <div class="help-item">
+                        <h4><i class="fa-solid fa-file-alt"></i> Debug Information</h4>
+                        <p>When reporting issues, please include:</p>
+                        <ul>
+                            <li>Operating system (Windows/macOS/Linux)</li>
+                            <li>Docker version (<code>docker --version</code>)</li>
+                            <li>Container logs (<code>docker logs obs-tv-animator</code>)</li>
+                            <li>Smart TV model and browser app name</li>
+                            <li>Network setup (router model, WiFi vs. wired)</li>
+                            <li>Steps to reproduce the issue</li>
+                        </ul>
+                    </div>
+
+                    <div class="help-item">
+                        <h4><i class="fa-solid fa-comments"></i> Community Support</h4>
+                        <p>Join discussions with other users:</p>
+                        <ul>
+                            <li>GitHub Discussions for general questions</li>
+                            <li>Discord community (link in GitHub README)</li>
+                            <li>Reddit r/obs or streaming communities</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <span>OBS-TV-Animator v{{ app_version }}</span>
+    </footer>
+    
+    <!-- Include Socket.IO for real-time updates -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../../static/js/global.js"></script>
+    
+    <script>
+    // Smart Diagnostic System
+    document.addEventListener('DOMContentLoaded', function() {
+        const checkboxes = document.querySelectorAll('.diagnostic-checkbox');
+        const resultsDiv = document.getElementById('diagnostic-results');
+        const allGoodDiv = document.getElementById('all-good');
+        const hasIssuesDiv = document.getElementById('has-issues');
+        const troubleshootingSections = document.querySelectorAll('.troubleshooting-section');
+        
+        // Initially hide all troubleshooting sections
+        troubleshootingSections.forEach(section => {
+            section.style.display = 'none';
+        });
+        
+        function updateDiagnosticResults() {
+            const checkedBoxes = document.querySelectorAll('.diagnostic-checkbox:checked');
+            const uncheckedBoxes = document.querySelectorAll('.diagnostic-checkbox:not(:checked)');
+            const totalCount = checkboxes.length;
+            const checkedCount = checkedBoxes.length;
+            
+            // Only show results if at least one checkbox is checked
+            if (checkedCount === 0) {
+                resultsDiv.style.display = 'none';
+                // Hide all sections when no checkboxes are selected
+                troubleshootingSections.forEach(section => {
+                    section.style.display = 'none';
+                });
+                return;
+            }
+            
+            resultsDiv.style.display = 'block';
+            
+            // Hide all sections first
+            troubleshootingSections.forEach(section => {
+                section.style.display = 'none';
+            });
+            
+            if (checkedCount === totalCount) {
+                // All systems working - show success message and hide all troubleshooting
+                allGoodDiv.style.display = 'block';
+                hasIssuesDiv.style.display = 'none';
+                
+                // Update success message to be more helpful
+                allGoodDiv.innerHTML = `
+                    <i class="fa-solid fa-check-circle"></i>
+                    <strong>All basic systems are working!</strong> 
+                    If you're still experiencing issues, they might be related to advanced integration or performance. 
+                    <button onclick="showAllSections()" class="btn-secondary" style="margin-left: 10px; padding: 5px 10px; border-radius: 4px;">
+                        Show All Troubleshooting Sections
+                    </button>
+                `;
+            } else {
+                // Issues detected - show relevant sections
+                allGoodDiv.style.display = 'none';
+                hasIssuesDiv.style.display = 'block';
+                
+                // Collect all issue types from unchecked boxes
+                const relevantIssueTypes = new Set();
+                
+                uncheckedBoxes.forEach(checkbox => {
+                    const relatesTo = checkbox.getAttribute('data-relates-to');
+                    if (relatesTo) {
+                        relatesTo.split(',').forEach(type => {
+                            relevantIssueTypes.add(type.trim());
+                        });
+                    }
+                });
+                
+                // Show sections that match the issue types
+                let sectionsShown = 0;
+                troubleshootingSections.forEach(section => {
+                    const sectionTypes = section.getAttribute('data-issue-type');
+                    if (sectionTypes) {
+                        const types = sectionTypes.split(',').map(t => t.trim());
+                        const hasRelevantType = types.some(type => relevantIssueTypes.has(type));
+                        
+                        if (hasRelevantType) {
+                            section.style.display = 'block';
+                            sectionsShown++;
+                        }
+                    }
+                });
+                
+                // Update the issues message with more context
+                const issueTypesList = Array.from(relevantIssueTypes).join(', ');
+                hasIssuesDiv.innerHTML = `
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    <strong>Issues detected with:</strong> ${issueTypesList}<br>
+                    <small>Showing ${sectionsShown} relevant troubleshooting section(s) below. Check off working items above to hide resolved sections.</small>
+                `;
+            }
+        }
+        
+        // Global function to show all sections (for advanced troubleshooting)
+        window.showAllSections = function() {
+            troubleshootingSections.forEach(section => {
+                section.style.display = 'block';
+            });
+            
+            hasIssuesDiv.style.display = 'block';
+            allGoodDiv.style.display = 'none';
+            hasIssuesDiv.innerHTML = `
+                <i class="fa-solid fa-tools"></i>
+                <strong>Advanced Troubleshooting Mode</strong><br>
+                <small>Showing all troubleshooting sections for comprehensive debugging.</small>
+            `;
+        };
+        
+        // Advanced diagnostics toggle
+        const toggleAdvancedBtn = document.getElementById('toggleAdvanced');
+        const resetBtn = document.getElementById('resetDiagnostic');
+        const advancedDiagnostics = document.querySelectorAll('.advanced-diagnostic');
+        let advancedVisible = false;
+        
+        toggleAdvancedBtn.addEventListener('click', function() {
+            advancedVisible = !advancedVisible;
+            
+            advancedDiagnostics.forEach(item => {
+                item.style.display = advancedVisible ? 'block' : 'none';
+            });
+            
+            this.innerHTML = advancedVisible 
+                ? '<i class="fa-solid fa-minus"></i> Hide Advanced Diagnostics'
+                : '<i class="fa-solid fa-plus"></i> Show Advanced Diagnostics';
+            
+            // Re-run diagnostic check with new checkboxes
+            updateDiagnosticResults();
+        });
+        
+        // Reset functionality
+        resetBtn.addEventListener('click', function() {
+            document.querySelectorAll('.diagnostic-checkbox').forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Hide advanced diagnostics
+            advancedVisible = false;
+            advancedDiagnostics.forEach(item => {
+                item.style.display = 'none';
+            });
+            toggleAdvancedBtn.innerHTML = '<i class="fa-solid fa-plus"></i> Show Advanced Diagnostics';
+            
+            // Reset results
+            resultsDiv.style.display = 'none';
+            troubleshootingSections.forEach(section => {
+                section.style.display = 'none';
+            });
+        });
+        
+        // Add event listeners to all checkboxes (including advanced ones)
+        function addCheckboxListeners() {
+            document.querySelectorAll('.diagnostic-checkbox').forEach(checkbox => {
+                checkbox.removeEventListener('change', updateDiagnosticResults); // Remove existing
+                checkbox.addEventListener('change', updateDiagnosticResults); // Add fresh listener
+            });
+        }
+        
+        addCheckboxListeners();
+        
+        // Run initial check in case any boxes are pre-checked
+        updateDiagnosticResults();
+    });
+    </script>
+</body>
+</html>

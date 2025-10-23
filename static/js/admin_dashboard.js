@@ -2,6 +2,7 @@ class AdminDashboard {
     constructor() {
         this.socket = null;
         this.connectedDevices = [];
+        this.isLoadingStatus = false;
         this.initWebSocket();
         this.loadStatus();
         this.startAutoRefresh();
@@ -33,26 +34,65 @@ class AdminDashboard {
                 this.updateDevicesList(data);
             });
             
+            this.socket.on('connect_error', (error) => {
+                console.error('WebSocket connection error:', error);
+                // Don't show popup for WebSocket errors as they're handled separately
+            });
+            
+            this.socket.on('error', (error) => {
+                console.error('WebSocket error:', error);
+            });
+            
         } catch (error) {
             console.error('WebSocket initialization failed:', error);
         }
     }
     
-    async loadStatus() {
+    async loadStatus(isRetry = false) {
+        // Prevent overlapping requests
+        if (this.isLoadingStatus && !isRetry) {
+            console.log('Status load already in progress, skipping');
+            return;
+        }
+        
+        this.isLoadingStatus = true;
+        
         try {
-            const response = await fetch('/admin/api/status');
+            const response = await fetch('/admin/api/status', {
+                method: 'GET',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
+            });
+            
+            // Check if response is ok (status 200-299)
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
             const data = await response.json();
             
             if (data.error) {
                 throw new Error(data.error);
             }
             
+            // Success - clear any error state and update display
+            this.clearErrorState();
             this.updateStatusDisplay(data);
             this.loadMediaList();
             
         } catch (error) {
             console.error('Failed to load status:', error);
-            this.showError('Failed to load server status');
+            
+            // Only show popup after multiple failures, not on first failure
+            if (!isRetry) {
+                console.log('Status load failed, attempting retry...');
+                setTimeout(() => this.loadStatus(true), 2000); // Retry after 2 seconds
+            } else {
+                this.handleStatusError(error);
+            }
+        } finally {
+            this.isLoadingStatus = false;
         }
     }
     
@@ -62,17 +102,21 @@ class AdminDashboard {
         document.getElementById('animationCount').textContent = data.animations_count || 0;
         document.getElementById('videoCount').textContent = data.videos_count || 0;
         
+        // Update WebSocket count (StreamerBot connections)
+        document.getElementById('websocketCount').textContent = data.streamerbot_count || 0;
+        
         document.getElementById('currentMediaName').textContent = data.current_media || 'None';
         document.getElementById('currentMediaType').textContent = 
             data.media_type ? `${data.media_type.toUpperCase()} File` : 'No media selected';
         
-        // Update devices list if available
-        if (data.tv_devices) {
-            this.updateDevicesList({
-                tv_devices: data.tv_devices,
-                tv_count: data.connected_clients
-            });
-        }
+        // Update TV devices list
+        this.updateTVDevicesList(data.tv_devices || [], data.connected_clients || 0);
+        
+        // Update StreamerBot connection status
+        this.updateStreamerbotStatus(data.streamerbot_devices || [], data.streamerbot_count || 0);
+        
+        // Update OBS Studio connection status
+        this.updateOBSStatus(data.obs_devices || [], data.obs_count || 0);
     }
     
     async loadMediaList() {
@@ -146,37 +190,68 @@ class AdminDashboard {
         console.log('Dashboard connection status:', connected ? 'Connected' : 'Disconnected');
     }
     
-    updateDevicesList(devicesInfo) {
-        const devicesList = document.getElementById('connectedDevicesList');
-        const tvDevices = devicesInfo.tv_devices || [];
+    updateTVDevicesList(tvDevices, tvCount) {
+        const tvDevicesList = document.getElementById('tvDevicesList');
+        const tvStatus = document.getElementById('tvDeviceStatus');
         
         if (tvDevices.length === 0) {
-            // No devices connected
-            devicesList.innerHTML = `
+            tvDevicesList.innerHTML = `
                 <div class="connected-devices">
                     <span class="device-indicator disconnected"></span>
-                    <div class="device-info">
-                        <div>No devices connected</div>
-                        <div class="device-type">Waiting for device...</div>
-                    </div>
+                    <span>No TV/Displays connected</span>
                 </div>
             `;
         } else {
-            // Show each connected device
-            devicesList.innerHTML = tvDevices.map(device => `
+            tvDevicesList.innerHTML = `
                 <div class="connected-devices">
                     <span class="device-indicator connected"></span>
-                    <div class="device-info">
-                        <div>Device Connected</div>
-                        <div class="device-id">${device.id}</div>
-                        <div class="device-type">Connected ${this.formatConnectionTime(device.connected_at)}</div>
-                    </div>
+                    <span>${tvCount} TV/Display${tvCount !== 1 ? 's' : ''} connected</span>
                 </div>
-            `).join('');
+            `;
         }
+    }
+
+    updateStreamerbotStatus(streamerbotDevices, streamerbotCount) {
+        const indicator = document.getElementById('streamerbotIndicator');
+        const status = document.getElementById('streamerbotStatus');
         
-        // Store for reference
-        this.connectedDevices = tvDevices;
+        if (streamerbotCount === 0) {
+            indicator.className = 'device-indicator disconnected';
+            status.textContent = 'Not Connected';
+        } else {
+            indicator.className = 'device-indicator connected';
+            status.textContent = `Connected (${streamerbotCount} connection${streamerbotCount !== 1 ? 's' : ''})`;
+        }
+    }
+
+    updateOBSStatus(obsDevices, obsCount) {
+        // #INSERT CODE HERE# - Future OBS Studio WebSocket integration
+        // TODO: Implement OBS Studio WebSocket connection detection
+        // This will connect to OBS Studio's WebSocket server (usually port 4455)
+        // and display connection status similar to StreamerBot
+        
+        const indicator = document.getElementById('obsIndicator');
+        const status = document.getElementById('obsStatus');
+        
+        // For now, always show as disconnected until we implement OBS WebSocket integration
+        indicator.className = 'device-indicator disconnected';
+        status.textContent = 'Not Connected';
+        
+        // Future implementation notes:
+        // - Use obs-websocket-js library or native WebSocket
+        // - Connect to ws://localhost:4455 (default OBS WebSocket port)
+        // - Handle authentication if OBS has password set
+        // - Monitor connection status and update indicator accordingly
+    }
+
+    // Legacy method for WebSocket events - now delegates to specific methods
+    updateDevicesList(devicesInfo) {
+        if (devicesInfo.tv_devices) {
+            this.updateTVDevicesList(devicesInfo.tv_devices, devicesInfo.tv_count);
+        }
+        if (devicesInfo.streamerbot_devices) {
+            this.updateStreamerbotStatus(devicesInfo.streamerbot_devices, devicesInfo.streamerbot_count);
+        }
     }
     
     formatConnectionTime(timestamp) {
@@ -197,15 +272,59 @@ class AdminDashboard {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
     
+    handleStatusError(error) {
+        // Only show popup for persistent errors, not temporary network issues
+        const errorMessage = error.message.toLowerCase();
+        
+        if (errorMessage.includes('networkerror') || 
+            errorMessage.includes('fetch') || 
+            errorMessage.includes('connection') ||
+            errorMessage.includes('timeout')) {
+            console.warn('Network connectivity issue detected, will retry on next refresh cycle');
+            this.showNetworkError();
+        } else {
+            this.showError('Failed to load server status: ' + error.message);
+        }
+    }
+    
+    showNetworkError() {
+        // Show a less intrusive notification for network issues
+        const statusElement = document.getElementById('connectionStatus');
+        if (statusElement) {
+            statusElement.textContent = 'Connection issue detected';
+            statusElement.style.color = '#f44336';
+        }
+    }
+    
+    clearErrorState() {
+        // Clear any error indicators when successfully connected
+        const statusElement = document.getElementById('connectionStatus');
+        if (statusElement) {
+            statusElement.textContent = 'Connected';
+            statusElement.style.color = '#4caf50';
+        }
+    }
+    
     showError(message) {
-        // Simple error display - could be enhanced with a proper notification system
-        alert(message);
+        // Only show alert for serious errors, not network hiccups
+        console.error('Dashboard error:', message);
+        
+        // Use a less intrusive notification if available, otherwise alert
+        if (typeof showNotification === 'function') {
+            showNotification(message, 'error');
+        } else {
+            alert(message);
+        }
     }
     
     startAutoRefresh() {
-        // Refresh status every 30 seconds
+        // Refresh status every 30 seconds, but prevent overlapping requests
         setInterval(() => {
-            this.loadStatus();
+            if (!this.isLoadingStatus) {
+                this.loadStatus();
+            } else {
+                console.log('Skipping status refresh - previous request still in progress');
+            }
         }, 30000);
     }
 }
@@ -239,3 +358,129 @@ function closeWarning() {
         }, 300);
     }
 }
+
+// Mascot Easter Egg Functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const mascot = document.querySelector('.floating-mascot');
+    const popover = document.getElementById('mascot-message');
+    
+    // Initialize mascot easter egg
+    
+    if (mascot && popover) {
+        // Track easter egg discovery
+        let easterEggFound = localStorage.getItem('mascotEasterEggFound') === 'true';
+
+        
+        // Add subtle hint for undiscovered easter egg
+        if (!easterEggFound) {
+            mascot.style.filter += ' brightness(1.1)';
+            mascot.title = 'Something magical might happen if you click me... 🎭';
+        } else {
+            mascot.title = 'Thanks for finding the easter egg! 🎉';
+        }
+        
+        // Add click listener to test basic functionality
+        mascot.addEventListener('click', function(e) {
+            console.log('🖱️ Mascot clicked!');
+            console.log('Popover element:', popover);
+            console.log('Popover popover attribute:', popover.getAttribute('popover'));
+            console.log('Mascot popovertarget:', mascot.getAttribute('popovertarget'));
+            
+            // Test if popover API is actually working
+            if (popover.showPopover) {
+                console.log('📋 showPopover method exists');
+                try {
+                    console.log('🔄 Attempting to show popover manually...');
+                    popover.showPopover();
+                    console.log('✅ Popover shown successfully');
+                } catch (error) {
+                    console.error('❌ Error showing popover:', error);
+                }
+            } else {
+                console.log('❌ showPopover method not available');
+            }
+        });
+        
+        // Check if browser supports Popover API
+        if ('popover' in HTMLElement.prototype && popover.showPopover) {
+            console.log('✅ Using native Popover API');
+            console.log('Popover support check - popover in HTMLElement:', 'popover' in HTMLElement.prototype);
+            console.log('Popover support check - showPopover method:', !!popover.showPopover);
+            
+            // Listen for popover show event
+            popover.addEventListener('toggle', function(e) {
+                console.log('🔄 Popover toggle event fired:', e.newState);
+                if (e.newState === 'open') {
+                    console.log('🎉 Easter egg discovered!');
+                    
+                    if (!easterEggFound) {
+                        localStorage.setItem('mascotEasterEggFound', 'true');
+                        easterEggFound = true;
+                        mascot.title = 'Thanks for finding the easter egg! 🎉';
+                        mascot.style.filter = 'drop-shadow(0 4px 8px var(--shadow-primary))'; // Remove brightness hint
+                        console.log('💾 Easter egg discovery saved to localStorage');
+                    }
+                    
+                    // Add special animation when opened
+                    popover.style.animation = 'popoverFadeIn 0.3s ease-out';
+                }
+            });
+            
+        } else {
+            // Fallback for browsers without Popover API support
+            popover.style.display = 'none';
+            popover.style.position = 'fixed';
+            popover.style.zIndex = '10000';
+            
+            mascot.addEventListener('click', function(e) {
+                e.preventDefault();
+                
+                if (popover.style.display === 'none') {
+                    // Position near mascot
+                    const rect = mascot.getBoundingClientRect();
+                    popover.style.display = 'block';
+                    popover.style.left = (rect.left - 150) + 'px';
+                    popover.style.top = (rect.top + 50) + 'px';
+                    
+                    if (!easterEggFound) {
+                        localStorage.setItem('mascotEasterEggFound', 'true');
+                        easterEggFound = true;
+                        mascot.title = 'Thanks for finding the easter egg! 🎉';
+                        mascot.style.filter = 'drop-shadow(0 4px 8px var(--shadow-primary))'; // Remove brightness hint
+                    }
+                } else {
+                    popover.style.display = 'none';
+                }
+            });
+            
+            // Close button for fallback
+            const closeBtn = popover.querySelector('.popover-close');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    popover.style.display = 'none';
+                });
+            }
+            
+            // Click outside to close (fallback)
+            document.addEventListener('click', function(e) {
+                if (!popover.contains(e.target) && !mascot.contains(e.target)) {
+                    popover.style.display = 'none';
+                }
+            });
+        }
+        
+        // Enhanced hover effect for discovered easter egg
+        mascot.addEventListener('mouseenter', function() {
+            if (easterEggFound) {
+                this.style.animation = 'float 1s ease-in-out infinite';
+            }
+        });
+        
+        mascot.addEventListener('mouseleave', function() {
+            this.style.animation = 'float 3s ease-in-out infinite';
+        });
+        
+    } else {
+        console.log('❌ Mascot easter egg elements not found');
+    }
+});

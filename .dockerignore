@@ -45,7 +45,7 @@ test_*
 *.temp
 *.log
 
-# Docker files (don't need these inside the container)
+# Docker files
 Dockerfile
 docker-compose.yml
 .dockerignore
@@ -58,7 +58,7 @@ build/
 .coverage
 htmlcov/
 
-# Node.js (if any)
+# Node.js
 node_modules/
 npm-debug.log*
 yarn-debug.log*

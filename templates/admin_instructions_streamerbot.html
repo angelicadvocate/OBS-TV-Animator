@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS-TV-Animator - StreamerBot Integration</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='assets/OTA_favicon_round.png') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/global.css') }}">
+    <link rel="stylesheet" href="../../static/css/admin_instructions.css">
+</head>
+<body{% if user_theme == 'dark' %} class="dark-mode"{% endif %}>
+    <div class="header-container">
+        <!-- Left Side: TV Icon and Title -->
+        <div class="header-left">
+            <i class="fas fa-tv header-icon"></i>
+            <div class="header-title">
+                <h1>OBS-TV-Animator</h1>
+                <p>StreamerBot Integration</p>
+            </div>
+        </div>
+
+        
+        <!-- Right Side: Three Rows of Buttons -->
+        <div class="header-right">
+
+            <!-- Row 1: Share Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="shareTwitter" title="Share on Twitter">
+                    <i class="fa-brands fa-twitter"></i>
+                </button>
+                <button class="btn-primary" id="shareFacebook" title="Share on Facebook">
+                    <i class="fa-brands fa-facebook"></i>
+                </button>
+                <button class="btn-primary" id="shareReddit" title="Share on Reddit">
+                    <i class="fa-brands fa-reddit"></i>
+                </button>
+                <button class="btn-primary" id="shareDiscord" title="Share on Discord">
+                    <i class="fa-brands fa-discord"></i>
+                </button>
+                <div class="user-welcome">
+                    <i class="fa-solid fa-user"></i> Welcome: {{ current_username }}
+                </div>
+            </div>
+                        
+            <!-- Row 2: Support Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="tipButton">
+                    <i class="fa-solid fa-heart"></i> Tip on Stream Elements
+                </button>
+                <button class="btn-primary" id="githubButton">
+                    <i class="fa-brands fa-github"></i> Star on GitHub
+                </button>
+            </div>
+            
+            <!-- Row 3: Admin Controls -->
+            <div class="button-row">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
+                <a href="/admin" class="btn-primary" style="text-decoration: none;" title="Dashboard">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+                <a href="/admin/instructions" class="btn-primary" style="text-decoration: none;" title="Instructions">
+                    <i class="fa-solid fa-book"></i> Instructions
+                </a>
+                <a href="/admin/users" class="btn-primary" style="text-decoration: none;" title="Manage Users">
+                    <i class="fa-solid fa-users"></i> Users
+                </a>
+                <a href="/admin/logout" class="btn-primary logout-btn" style="text-decoration: none;" title="Logout">
+                    <i class="fa-solid fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="admin-container">
+        <div class="instructions-content">
+            <!-- Navigation -->
+            <div class="card">
+                <a href="/admin/instructions" class="btn-secondary">
+                    <i class="fa-solid fa-arrow-left"></i> Back to Instructions
+                </a>
+            </div>
+
+            <!-- StreamerBot Integration Overview -->
+            <div class="card">
+                <h2><i class="fa-solid fa-robot"></i> StreamerBot Integration</h2>
+                <p>Connect OBS-TV-Animator to StreamerBot to automatically trigger Smart TV animations based on stream events like follows, donations, subscriptions, raids, and chat commands.</p>
+                
+                <div class="warning-box">
+                    <i class="fa-solid fa-exclamation-triangle"></i>
+                    <strong>Prerequisites:</strong> StreamerBot (free), Smart TV already connected. <a href="/admin/instructions/getting-started">Complete Getting Started first →</a>
+                </div>
+            </div>
+
+            <!-- StreamerBot Setup -->
+            <div class="card">
+                <h2><i class="fa-solid fa-download"></i> StreamerBot Setup</h2>
+                
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <h4>Download StreamerBot</h4>
+                            <p>If you don't have StreamerBot yet:</p>
+                            <ol>
+                                <li>Visit: <a href="https://streamer.bot/" target="_blank">https://streamer.bot/</a></li>
+                                <li>Download and install the latest version (free)</li>
+                                <li>Connect to your streaming platform (Twitch/YouTube)</li>
+                                <li>Set up basic platform integration</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <h4>Test OBS-TV-Animator Connection</h4>
+                            <p>First, verify the connection is working by testing in your browser:</p>
+                            <div class="config-box">
+                                <strong>Test URLs (open in browser):</strong><br>
+                                <code>http://localhost:5000/trigger?animation=anim1.html</code><br>
+                                <code>http://localhost:5000/trigger?animation=anim2.html</code><br>
+                                <code>http://localhost:5000/trigger?animation=brb.html</code>
+                            </div>
+                            <p>If these work in your browser, they'll work in StreamerBot too!</p>
+                            
+                            <div class="alert alert-success">
+                                <i class="fa-solid fa-check-circle"></i>
+                                <strong>Success:</strong> You should see a JSON response like:<br>
+                                <code>{"success": true, "current_animation": "anim1.html", ...}</code>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Action Creation -->
+            <div class="card">
+                <h2><i class="fa-solid fa-plus-circle"></i> Creating StreamerBot Actions</h2>
+                <p>StreamerBot uses "Actions" to respond to events. Each action can trigger an animation on your Smart TV.</p>
+                
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <h4>Create New Action</h4>
+                            <ol>
+                                <li>Open StreamerBot</li>
+                                <li>Go to <strong>Actions</strong> tab</li>
+                                <li>Right-click in the Actions list</li>
+                                <li>Select <strong>"Add Action"</strong></li>
+                                <li>Name it (e.g., "TV Animation - Follow")</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <h4>Add Fetch URL Sub-Action</h4>
+                            <ol>
+                                <li>In your new action, right-click in the <strong>Sub-Actions</strong> area</li>
+                                <li>Navigate: <strong>Add → Core → Network → Fetch URL</strong></li>
+                                <li>Configure the Fetch URL action:</li>
+                            </ol>
+                            <div class="config-box">
+                                <strong>Fetch URL Configuration:</strong><br>
+                                <strong>URL:</strong> <code>http://localhost:5000/trigger?animation=anim1.html</code><br>
+                                <strong>Variable Name:</strong> <code>triggerResponse</code> (can be any name)<br>
+                                <strong>Method:</strong> GET (default)<br><br>
+                                <strong>💡 Pro Tip:</strong> The variable name doesn't affect functionality, it's just for storing the response.
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fa-solid fa-lightbulb"></i>
+                                <strong>Why this works:</strong> StreamerBot's Fetch URL action makes a simple GET request to your OBS-TV-Animator server. 
+                                The animation parameter in the URL tells the server which animation to display.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">3</span>
+                        <div class="step-content">
+                            <h4>Assign Trigger</h4>
+                            <ol>
+                                <li>Right-click your action</li>
+                                <li>Select <strong>"Add Trigger"</strong></li>
+                                <li>Choose event type (e.g., <strong>Platforms → Twitch → Follow</strong>)</li>
+                                <li>Configure any additional settings</li>
+                            </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Common Event Examples -->
+            <div class="card">
+                <h2><i class="fa-solid fa-star"></i> Common Stream Events</h2>
+                <p>Here are popular events and suggested animations:</p>
+                
+                <div class="event-examples">
+                    <div class="event-card">
+                        <h4><i class="fa-solid fa-heart"></i> New Follow</h4>
+                        <p><strong>Trigger:</strong> Platforms → Twitch → Follow</p>
+                        <p><strong>Suggested Animation:</strong> anim1.html (celebration)</p>
+                        <div class="code-example">
+                            <strong>Fetch URL:</strong><br>
+                            <code>http://localhost:5000/trigger?animation=anim1.html</code>
+                        </div>
+                    </div>
+
+                    <div class="event-card">
+                        <h4><i class="fa-solid fa-gift"></i> Donation/Tip</h4>
+                        <p><strong>Trigger:</strong> Platforms → StreamLabs → Donation</p>
+                        <p><strong>Suggested Animation:</strong> anim2.html (flashy celebration)</p>
+                        <div class="code-example">
+                            <strong>Fetch URL:</strong><br>
+                            <code>http://localhost:5000/trigger?animation=anim2.html</code>
+                        </div>
+                    </div>
+
+                    <div class="event-card">
+                        <h4><i class="fa-solid fa-users"></i> Raid Received</h4>
+                        <p><strong>Trigger:</strong> Platforms → Twitch → Raid</p>
+                        <p><strong>Suggested Animation:</strong> anim3.html (epic entrance)</p>
+                        <div class="code-example">
+                            <strong>Fetch URL:</strong><br>
+                            <code>http://localhost:5000/trigger?animation=anim3.html</code>
+                        </div>
+                    </div>
+
+                    <div class="event-card">
+                        <h4><i class="fa-solid fa-crown"></i> New Subscriber</h4>
+                        <p><strong>Trigger:</strong> Platforms → Twitch → Subscribe</p>
+                        <p><strong>Suggested Animation:</strong> anim4.html (premium celebration)</p>
+                        <div class="code-example">
+                            <strong>Fetch URL:</strong><br>
+                            <code>http://localhost:5000/trigger?animation=anim4.html</code>
+                        </div>
+                    </div>
+
+                    <div class="event-card">
+                        <h4><i class="fa-solid fa-comment"></i> Chat Command</h4>
+                        <p><strong>Trigger:</strong> Commands → Custom Command (!tv, !animate)</p>
+                        <p><strong>Suggested Animation:</strong> User-specified or random</p>
+                        <div class="code-example">
+<pre>{
+    "animation": "%input%",
+    "source": "chat_command",
+    "user": "%user%"
+}</pre>
+                        </div>
+                    </div>
+
+                    <div class="event-card">
+                        <h4><i class="fa-solid fa-pause"></i> Stream Break</h4>
+                        <p><strong>Trigger:</strong> Manual trigger or timer</p>
+                        <p><strong>Animation:</strong> brb.html (be right back)</p>
+                        <div class="code-example">
+                            <strong>Fetch URL:</strong><br>
+                            <code>http://localhost:5000/trigger?animation=brb.html</code>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Reference -->
+            <div class="card">
+                <h2><i class="fa-solid fa-rocket"></i> Quick Reference - All Animation URLs</h2>
+                <p>Copy these URLs directly into StreamerBot's Fetch URL action:</p>
+                
+                <div class="quick-reference">
+                    <div class="url-card">
+                        <h4>🎉 Animation 1 (Celebration)</h4>
+                        <code class="url-code">http://localhost:5000/trigger?animation=anim1.html</code>
+                        <button class="copy-btn" onclick="copyToClipboard('http://localhost:5000/trigger?animation=anim1.html')">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    
+                    <div class="url-card">
+                        <h4>✨ Animation 2 (Flashy)</h4>
+                        <code class="url-code">http://localhost:5000/trigger?animation=anim2.html</code>
+                        <button class="copy-btn" onclick="copyToClipboard('http://localhost:5000/trigger?animation=anim2.html')">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    
+                    <div class="url-card">
+                        <h4>🚀 Animation 3 (Epic)</h4>
+                        <code class="url-code">http://localhost:5000/trigger?animation=anim3.html</code>
+                        <button class="copy-btn" onclick="copyToClipboard('http://localhost:5000/trigger?animation=anim3.html')">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    
+                    <div class="url-card">
+                        <h4>👑 Animation 4 (Premium)</h4>
+                        <code class="url-code">http://localhost:5000/trigger?animation=anim4.html</code>
+                        <button class="copy-btn" onclick="copyToClipboard('http://localhost:5000/trigger?animation=anim4.html')">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
+                    
+                    <div class="url-card">
+                        <h4>⏸️ Be Right Back</h4>
+                        <code class="url-code">http://localhost:5000/trigger?animation=brb.html</code>
+                        <button class="copy-btn" onclick="copyToClipboard('http://localhost:5000/trigger?animation=brb.html')">
+                            <i class="fa-solid fa-copy"></i> Copy
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="alert alert-info">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <strong>Setup Steps:</strong>
+                    <ol>
+                        <li>Create Action in StreamerBot</li>
+                        <li>Add Sub-Action: <strong>Add → Core → Network → Fetch URL</strong></li>
+                        <li>Paste one of the URLs above</li>
+                        <li>Set Variable Name: <code>animationTrigger</code></li>
+                        <li>Add your trigger (Follow, Donation, etc.)</li>
+                        <li>Test and enjoy! 🎊</li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Advanced Features -->
+            <div class="card">
+                <h2><i class="fa-solid fa-cogs"></i> Advanced StreamerBot Features</h2>
+                
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number">💡</span>
+                        <div class="step-content">
+                            <h4>Dynamic Animation Selection</h4>
+                            <p>Use StreamerBot variables to choose animations dynamically:</p>
+                            <pre class="code-block">{
+    "animation": "%randomAnimation%",
+    "source": "random_event"
+}</pre>
+                            <p>Create a variable <code>%randomAnimation%</code> that picks from your available animations.</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">🎯</span>
+                        <div class="step-content">
+                            <h4>Conditional Animations</h4>
+                            <p>Use StreamerBot's IF conditions to trigger different animations based on:</p>
+                            <ul>
+                                <li>Donation amount thresholds</li>
+                                <li>Number of months subscribed</li>
+                                <li>Time of day</li>
+                                <li>Current game being played</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">⏰</span>
+                        <div class="step-content">
+                            <h4>Timed Events</h4>
+                            <p>Set up automatic animations:</p>
+                            <ul>
+                                <li><strong>Hourly reminders:</strong> Show follow/subscribe animations</li>
+                                <li><strong>Break timers:</strong> Auto-trigger BRB screen</li>
+                                <li><strong>Stream milestones:</strong> Special animations at viewer counts</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">🎮</span>
+                        <div class="step-content">
+                            <h4>Game-Specific Animations</h4>
+                            <p>Change animations based on the game you're playing:</p>
+                            <pre class="code-block">{
+    "animation": "%gameSpecificAnimation%",
+    "source": "game_change",
+    "game": "%game%"
+}</pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Chat Commands -->
+            <div class="card">
+                <h2><i class="fa-solid fa-terminal"></i> Setting Up Chat Commands</h2>
+                
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number">1</span>
+                        <div class="step-content">
+                            <h4>Create Animation Chat Command</h4>
+                            <ol>
+                                <li>In StreamerBot, go to <strong>Commands</strong> tab</li>
+                                <li>Right-click and <strong>"Add Command"</strong></li>
+                                <li>Command: <code>!tv</code> or <code>!animate</code></li>
+                                <li>Set permission level (Everyone, VIP, Mod, etc.)</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">2</span>
+                        <div class="step-content">
+                            <h4>Command Logic</h4>
+                            <p>Example command that lets users trigger specific animations:</p>
+                            <div class="command-example">
+                                <strong>Command:</strong> <code>!tv anim1</code><br>
+                                <strong>Action:</strong> Parse the argument and trigger the animation<br>
+                                <strong>Response:</strong> "Animation changed to %input% by %user%!"
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number">3</span>
+                        <div class="step-content">
+                            <h4>Safety Validation</h4>
+                            <p>Add checks to prevent invalid animations:</p>
+                            <ul>
+                                <li>Validate input is in allowed list: anim1.html, anim2.html, anim3.html, anim4.html, brb.html</li>
+                                <li>Set cooldowns to prevent spam</li>
+                                <li>Restrict to trusted users for powerful commands</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Testing & Troubleshooting -->
+            <div class="card">
+                <h2><i class="fa-solid fa-bug"></i> Testing & Troubleshooting</h2>
+                
+                <div class="troubleshooting-list">
+                    <div class="trouble-item">
+                        <h4><i class="fa-solid fa-play"></i> Test Actions</h4>
+                        <p>Always test your actions before going live:</p>
+                        <ol>
+                            <li>Right-click your action in StreamerBot</li>
+                            <li>Select <strong>"Test Trigger"</strong></li>
+                            <li>Watch your Smart TV for the animation change</li>
+                            <li>Check StreamerBot logs for any errors</li>
+                        </ol>
+                    </div>
+
+                    <div class="trouble-item">
+                        <h4><i class="fa-solid fa-times-circle"></i> HTTP Request Failures</h4>
+                        <ul>
+                            <li>Verify OBS-TV-Animator is running and accessible</li>
+                            <li>Check the IP address and port (8080)</li>
+                            <li>Ensure JSON format is correct in request body</li>
+                            <li>Look at StreamerBot logs for specific error messages</li>
+                        </ul>
+                    </div>
+
+                    <div class="trouble-item">
+                        <h4><i class="fa-solid fa-clock"></i> Events Not Triggering</h4>
+                        <ul>
+                            <li>Check StreamerBot connection to your streaming platform</li>
+                            <li>Verify event triggers are properly configured</li>
+                            <li>Test with manual triggers first</li>
+                            <li>Check if there are permission or cooldown restrictions</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Example StreamerBot Import -->
+            <div class="card">
+                <h2><i class="fa-solid fa-file-import"></i> Ready-to-Use StreamerBot Actions</h2>
+                <p>Here's a complete StreamerBot action you can import:</p>
+                
+                <div class="import-section">
+                    <div class="code-block-wrapper">
+                        <button class="copy-button" onclick="copyToClipboard('streamerbot-import')">
+                            <i class="fa-solid fa-copy"></i> Copy Import Code
+                        </button>
+                        <pre id="streamerbot-import" class="code-block">{
+  "actions": {
+    "TV Animation - Follow": {
+      "id": "tv-follow-001",
+      "name": "TV Animation - Follow",
+      "triggers": [
+        {
+          "type": "TwitchFollow",
+          "enabled": true
+        }
+      ],
+      "subActions": [
+        {
+          "type": "FetchURL",
+          "url": "http://localhost:5000/trigger?animation=anim1.html",
+          "method": "GET",
+          "variableName": "animationTrigger"
+        }
+      ]
+    }
+  }
+}</pre>
+                    </div>
+                    <p><strong>To import:</strong> Copy this code → StreamerBot → Actions → Right-click → Import Actions → Paste</p>
+                    <p><strong>Remember:</strong> Change <code>[YOUR_IP]</code> to your actual server IP address!</p>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fa-solid fa-arrow-right"></i> Next Steps</h2>
+                <p>Your StreamerBot is now connected! Explore these additional features:</p>
+                
+                <div class="next-steps-grid">
+                    <a href="/admin/manage" class="next-step-card">
+                        <i class="fa-solid fa-upload"></i>
+                        <h4>Custom Animations</h4>
+                        <p>Upload personalized HTML animations and videos</p>
+                    </a>
+                    
+                    <a href="/admin/instructions/obs-integration" class="next-step-card">
+                        <i class="fa-solid fa-gamepad"></i>
+                        <h4>OBS Integration</h4>
+                        <p>Combine with OBS scene automation</p>
+                    </a>
+                    
+                    <a href="/admin/instructions/troubleshooting" class="next-step-card">
+                        <i class="fa-solid fa-question-circle"></i>
+                        <h4>Troubleshooting</h4>
+                        <p>Common issues and solutions</p>
+                    </a>
+                </div>
+            </div>
+            <!-- Success Summary -->
+            <div class="card success-summary">
+                <h2><i class="fa-solid fa-trophy"></i> You're All Set!</h2>
+                <p>🎉 Congratulations! You now have StreamerBot connected to your Smart TV animations.</p>
+                
+                <div class="success-checklist">
+                    <h4>✅ What You've Accomplished:</h4>
+                    <ul>
+                        <li>✅ StreamerBot is configured with Fetch URL actions</li>
+                        <li>✅ Your Smart TV can display animations on command</li>
+                        <li>✅ Stream events will trigger awesome visual effects</li>
+                        <li>✅ Your viewers will have an enhanced experience</li>
+                    </ul>
+                </div>
+                
+                <div class="next-steps">
+                    <h4>🚀 Next Steps:</h4>
+                    <ul>
+                        <li><strong>Test Everything:</strong> Trigger some test events to make sure animations work</li>
+                        <li><strong>Customize Triggers:</strong> Add more event types (raids, donations, etc.)</li>
+                        <li><strong>Create More Animations:</strong> Add custom HTML/CSS animations to the animations folder</li>
+                        <li><strong>Show Off:</strong> Let your viewers know about the new interactive TV experience!</li>
+                    </ul>
+                </div>
+                
+                <div class="help-reminder">
+                    <p><strong>Need Help?</strong> Check the <a href="/admin/instructions/troubleshooting">Troubleshooting Guide</a> or visit our community.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <span>OBS-TV-Animator v{{ app_version }}</span>
+    </footer>
+    
+    <!-- Include Socket.IO for real-time updates -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../../static/js/global.js"></script>
+    
+    <script>
+    function copyToClipboard(textOrElementId) {
+        let text;
+        let button;
+        
+        // Check if it's an element ID or direct text
+        if (textOrElementId.startsWith('http://')) {
+            // Direct URL text
+            text = textOrElementId;
+            button = event.target;
+        } else {
+            // Element ID (existing functionality)
+            const element = document.getElementById(textOrElementId);
+            text = element.textContent;
+            button = element.parentElement.querySelector('.copy-button');
+        }
+        
+        navigator.clipboard.writeText(text).then(function() {
+            // Show success feedback
+            const originalText = button.innerHTML;
+            button.innerHTML = '<i class="fa-solid fa-check"></i> Copied!';
+            setTimeout(() => {
+                button.innerHTML = originalText;
+            }, 2000);
+        }).catch(function(err) {
+            console.error('Failed to copy text: ', err);
+            button.innerHTML = '<i class="fa-solid fa-times"></i> Failed';
+            setTimeout(() => {
+                button.innerHTML = originalText;
+            }, 2000);
+        });
+    }
+    </script>
+</body>
+</html>

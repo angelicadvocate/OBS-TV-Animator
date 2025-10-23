@@ -3,14 +3,21 @@
    Global styles are in global.css
    ============================================================================= */
 
-/* Upload Section */
+/* Upload and Thumbnail Row */
+.upload-thumbnail-row {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-bottom: var(--spacing-xl);
+}
+
+/* Upload Section - 75% width */
 .upload-section {
     background: var(--card-bg);
     padding: var(--spacing-xl);
     border-radius: var(--radius-xl);
-    margin-bottom: var(--spacing-xl);
     border: 1px solid var(--border-color);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    flex: 3; /* 75% of available width */
 }
 
 .upload-section h2 {
@@ -77,6 +84,72 @@
 
 .file-input {
     display: none;
+}
+
+/* Thumbnail Management Section - 25% width */
+.thumbnail-section {
+    background: var(--card-bg);
+    padding: var(--spacing-lg);
+    border-radius: var(--radius-xl);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    flex: 1; /* 25% of available width */
+}
+
+.thumbnail-section h2 {
+    color: var(--highlight);
+    margin-bottom: var(--spacing-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    font-size: 1.3em; /* Smaller heading for compact layout */
+}
+
+.thumbnail-controls {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.thumbnail-controls .btn-primary,
+.thumbnail-controls .btn-secondary {
+    font-size: 0.85em;
+    padding: var(--spacing-sm) var(--spacing-md);
+}
+
+.thumbnail-status {
+    background: var(--background-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-color);
+}
+
+.status-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.status-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: var(--card-bg);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-color);
+    font-size: 0.9em;
+}
+
+.status-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.status-value {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-family: 'Orbitron', monospace;
 }
 
 /* Files Section */
@@ -149,6 +222,9 @@
     transition: all var(--transition-medium);
     position: relative;
     overflow: hidden;
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
 }
 
 .file-card::before {
@@ -166,15 +242,22 @@
     box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
 }
 
-/* File Card Content */
+/* File Card Content - Left Side */
+.file-left {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex: 1;
+}
+
 .file-thumbnail {
-    text-align: center;
-    margin-bottom: var(--spacing-md);
+    flex-shrink: 0;
 }
 
 .file-thumbnail img {
-    max-width: 100%;
-    height: 120px;
+    width: 120px;
+    height: 80px;
     object-fit: cover;
     border-radius: var(--radius-md);
 }
@@ -183,16 +266,16 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    height: 120px;
+    width: 120px;
+    height: 80px;
     background: var(--background-tertiary);
     border-radius: var(--radius-md);
-    font-size: 2rem;
+    font-size: 1.5rem;
     color: var(--text-secondary);
 }
 
 .file-info {
     text-align: center;
-    margin-bottom: var(--spacing-md);
 }
 
 .file-name {
@@ -222,8 +305,9 @@
 
 .file-actions {
     display: flex;
-    justify-content: center;
-    gap: var(--spacing-sm);
+    flex-direction: column;
+    gap: var(--spacing-xs);
+    flex-shrink: 0;
 }
 
 .action-btn {
@@ -237,10 +321,25 @@
     transition: all var(--transition-medium);
     display: flex;
     align-items: center;
+    justify-content: center;
     gap: var(--spacing-xs);
+    min-width: 140px;
+    white-space: nowrap;
     box-shadow: 
         0 2px 4px rgba(0, 0, 0, 0.2),
         inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.action-btn.play-btn {
+    background: rgba(76, 175, 80, 0.3);
+}
+
+.action-btn.delete-btn {
+    background: rgba(244, 67, 54, 0.3);
+}
+
+.action-btn.streamerbot-btn {
+    background: rgba(33, 150, 243, 0.3);
 }
 
 .action-btn:hover {
@@ -269,7 +368,52 @@
         inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
+.action-btn.streamerbot-btn:hover {
+    background: #2196F3;
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-1px);
+    box-shadow: 
+        0 4px 12px rgba(0, 0, 0, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+}
+
 /* Responsive Design */
+@media (max-width: 992px) {
+    .upload-thumbnail-row {
+        flex-direction: column;
+    }
+    
+    .upload-section,
+    .thumbnail-section {
+        flex: none;
+    }
+    
+    .thumbnail-section {
+        padding: var(--spacing-xl);
+    }
+    
+    .thumbnail-section h2 {
+        font-size: 1.5em;
+    }
+    
+    .thumbnail-controls {
+        flex-direction: row;
+        gap: var(--spacing-md);
+    }
+    
+    .thumbnail-controls .btn-primary,
+    .thumbnail-controls .btn-secondary {
+        font-size: 1em;
+        padding: var(--spacing-md) var(--spacing-lg);
+    }
+    
+    .status-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: var(--spacing-md);
+    }
+}
+
 @media (max-width: 768px) {
     .files-header {
         flex-direction: column;
@@ -283,5 +427,17 @@
     
     .files-grid {
         grid-template-columns: 1fr;
+    }
+    
+    .file-actions {
+        flex-wrap: wrap;
+        gap: var(--spacing-xs);
+    }
+    
+    .action-btn {
+        flex: 1;
+        min-width: 0;
+        font-size: var(--font-size-small);
+        padding: var(--spacing-xs);
     }
 }

@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>OBS-TV-Animator - File Management</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../static/assets/OTA_favicon_round.png">
+    <link rel="shortcut icon" type="image/png" href="../static/assets/OTA_favicon_round.png">
+    
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
@@ -51,7 +56,7 @@
                     <i class="fa-solid fa-heart"></i> Tip on Stream Elements
                 </button>
                 <button class="btn-primary" id="githubButton">
-                    <i class="fa-brands fa-github"></i> Star us on GitHub
+                    <i class="fa-brands fa-github"></i> Star on GitHub
                 </button>
             </div>
             
@@ -74,31 +79,76 @@
     </div>
     
     <div class="admin-container">
-        <!-- Upload Section -->
-        <div class="upload-section">
-            <h2><i class="fa-solid fa-upload"></i> Upload New Files</h2>
-            <p style="opacity: 0.8; margin-bottom: 20px;">
-                Drag and drop files here or click to browse. Supports HTML animations and video files.
+        <!-- Upload and Thumbnail Management Row -->
+        <div class="upload-thumbnail-row">
+            <!-- Upload Section (75% width) -->
+            <div class="upload-section">
+                <h2><i class="fa-solid fa-upload"></i> Upload New Files</h2>
+                <p style="opacity: 0.8; margin-bottom: 20px;">
+                    Drag and drop files here or click to browse. Supports HTML animations and video files.
+                </p>
+                
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+                    <div class="upload-text">Drop files here or click to browse</div>
+                    <div class="upload-subtext">Supports: HTML, MP4, WebM, OGG, AVI, MOV, MKV</div>
+                    <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                        Choose Files
+                    </button>
+                </div>
+                
+                <input type="file" id="fileInput" class="file-input" multiple 
+                       accept=".html,.htm,.mp4,.webm,.ogg,.avi,.mov,.mkv">
+                
+                <div class="progress-bar" id="progressBar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                
+                <div class="upload-status" id="uploadStatus"></div>
+            </div>
+            
+            <!-- Thumbnail Management Section (25% width) -->
+            <div class="thumbnail-section">
+            <h2><i class="fa-solid fa-image"></i> Thumbnails</h2>
+            <p style="opacity: 0.8; margin-bottom: 15px; font-size: 0.9em;">
+                Auto-generate visual previews for uploaded files.
             </p>
             
-            <div class="upload-area" id="uploadArea">
-                <div class="upload-icon"><i class="fa-solid fa-cloud-arrow-up"></i></div>
-                <div class="upload-text">Drop files here or click to browse</div>
-                <div class="upload-subtext">Supports: HTML, MP4, WebM, OGG, AVI, MOV, MKV</div>
-                <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
-                    Choose Files
+            <div class="thumbnail-controls">
+                <button class="btn-primary" id="generateThumbnailsBtn">
+                    <i class="fa-solid fa-magic-wand-sparkles"></i> Generate All Thumbnails
+                </button>
+                <button class="btn-secondary" id="thumbnailStatusBtn">
+                    <i class="fa-solid fa-chart-line"></i> Check Status
                 </button>
             </div>
             
-            <input type="file" id="fileInput" class="file-input" multiple 
-                   accept=".html,.htm,.mp4,.webm,.ogg,.avi,.mov,.mkv">
-            
-            <div class="progress-bar" id="progressBar">
-                <div class="progress-fill" id="progressFill"></div>
+            <div class="thumbnail-status" id="thumbnailStatus" style="margin-top: 15px; display: none;">
+                <div class="status-grid">
+                    <div class="status-item">
+                        <span class="status-label">Total Files:</span>
+                        <span class="status-value" id="totalFiles">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">HTML Files:</span>
+                        <span class="status-value" id="htmlFiles">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Video Files:</span>
+                        <span class="status-value" id="videoFiles">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Thumbnails Generated:</span>
+                        <span class="status-value" id="thumbnailCount">-</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Completion:</span>
+                        <span class="status-value" id="completionPercentage">-</span>
+                    </div>
+                </div>
             </div>
-            
-            <div class="upload-status" id="uploadStatus"></div>
         </div>
+        </div> <!-- Close upload-thumbnail-row -->
         
         <!-- Files Section -->
         <div class="files-section">
@@ -120,6 +170,11 @@
             </div>
         </div>
     </div>
+
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <span>OBS-TV-Animator v{{ app_version }}</span>
+    </footer>
 
     <!-- Notification System -->
     <div id="notification" class="notification"></div>

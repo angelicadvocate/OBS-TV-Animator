@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS-TV-Animator - Instructions & Setup</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../static/assets/OTA_favicon_round.png">
+    <link rel="shortcut icon" type="image/png" href="../static/assets/OTA_favicon_round.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../static/css/global.css">
+    <link rel="stylesheet" href="../static/css/admin_instructions.css">
+</head>
+<body{% if user_theme == 'dark' %} class="dark-mode"{% endif %}>
+    <div class="header-container">
+        <!-- Left Side: TV Icon and Title -->
+        <div class="header-left">
+            <i class="fas fa-tv header-icon"></i>
+            <div class="header-title">
+                <h1>OBS-TV-Animator</h1>
+                <p>Instructions & Setup</p>
+            </div>
+        </div>
+
+        
+        <!-- Right Side: Three Rows of Buttons -->
+        <div class="header-right">
+
+            <!-- Row 1: Share Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="shareTwitter" title="Share on Twitter">
+                    <i class="fa-brands fa-twitter"></i>
+                </button>
+                <button class="btn-primary" id="shareFacebook" title="Share on Facebook">
+                    <i class="fa-brands fa-facebook"></i>
+                </button>
+                <button class="btn-primary" id="shareReddit" title="Share on Reddit">
+                    <i class="fa-brands fa-reddit"></i>
+                </button>
+                <button class="btn-primary" id="shareDiscord" title="Share on Discord">
+                    <i class="fa-brands fa-discord"></i>
+                </button>
+                <div class="user-welcome">
+                    <i class="fa-solid fa-user"></i> Welcome: {{ current_username }}
+                </div>
+            </div>
+                        
+            <!-- Row 2: Support Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="tipButton">
+                    <i class="fa-solid fa-heart"></i> Tip on Stream Elements
+                </button>
+                <button class="btn-primary" id="githubButton">
+                    <i class="fa-brands fa-github"></i> Star on GitHub
+                </button>
+            </div>
+            
+            <!-- Row 3: Admin Controls -->
+            <div class="button-row">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
+                <a href="/admin" class="btn-primary" style="text-decoration: none;" title="Dashboard">
+                    <i class="fa-solid fa-home"></i> Dashboard
+                </a>
+                <a href="/admin/manage" class="btn-primary" style="text-decoration: none;" title="Manage Files">
+                    <i class="fa-solid fa-folder"></i> Files
+                </a>
+                <a href="/admin/users" class="btn-primary" style="text-decoration: none;" title="Manage Users">
+                    <i class="fa-solid fa-users"></i> Users
+                </a>
+                <a href="/admin/logout" class="btn-primary logout-btn" style="text-decoration: none;" title="Logout">
+                    <i class="fa-solid fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <div class="admin-container">
+        <div class="instructions-content">
+            <!-- Welcome Section -->
+            <div class="card">
+                <h2><i class="fa-solid fa-book"></i> Instructions & Setup Guide</h2>
+                <p>Welcome to OBS-TV-Animator! Choose a section below to get detailed setup instructions for your streaming workflow.</p>
+            </div>
+
+            <!-- Instruction Categories -->
+            <div class="instruction-categories">
+                <div class="instruction-card">
+                    <div class="instruction-icon">
+                        <i class="fa-solid fa-rocket"></i>
+                    </div>
+                    <h3>Getting Started</h3>
+                    <p>Basic setup and Smart TV configuration</p>
+                    <a href="/admin/instructions/getting-started" class="btn-primary">
+                        <i class="fa-solid fa-arrow-right"></i> Get Started
+                    </a>
+                </div>
+
+                <div class="instruction-card">
+                    <div class="instruction-icon">
+                        <i class="fa-solid fa-gamepad"></i>
+                    </div>
+                    <h3>OBS Studio</h3>
+                    <p>WebSocket integration and scene triggers</p>
+                    <a href="/admin/instructions/obs-integration" class="btn-primary">
+                        <i class="fa-solid fa-arrow-right"></i> OBS Setup
+                    </a>
+                </div>
+
+                <div class="instruction-card">
+                    <div class="instruction-icon">
+                        <i class="fa-solid fa-robot"></i>
+                    </div>
+                    <h3>StreamerBot</h3>
+                    <p>Event automation and API integration</p>
+                    <a href="/admin/instructions/streamerbot-integration" class="btn-primary">
+                        <i class="fa-solid fa-arrow-right"></i> StreamerBot
+                    </a>
+                </div>
+
+                <div class="instruction-card">
+                    <div class="instruction-icon">
+                        <i class="fa-solid fa-question-circle"></i>
+                    </div>
+                    <h3>Troubleshooting</h3>
+                    <p>Common issues and FAQ</p>
+                    <a href="/admin/instructions/troubleshooting" class="btn-primary">
+                        <i class="fa-solid fa-arrow-right"></i> Get Help
+                    </a>
+                </div>
+            </div>
+
+            <!-- Support & Community -->
+            <div class="card support-card">
+                <h2><i class="fa-solid fa-heart"></i> Thanks for Using OBS-TV-Animator!</h2>
+                <p>We hope this tool helps enhance your streaming experience. If you encounter any issues or have suggestions for improvements, please don't hesitate to reach out.</p>
+                
+                <div class="support-content">
+                    <div class="support-text">
+                        <h4><i class="fa-solid fa-bug"></i> Found a Bug or Need Help?</h4>
+                        <p>When reporting issues, please include:</p>
+                        <ul>
+                            <li>Your operating system and Docker version</li>
+                            <li>Steps to reproduce the problem</li>
+                            <li>Any error messages or logs</li>
+                            <li>Screenshots if applicable</li>
+                        </ul>
+                    </div>
+                    <div class="support-action">
+                        <a href="https://github.com/angelicadvocate/OBS-TV-Animator/issues" target="_blank" class="btn-primary github-btn">
+                            <i class="fa-brands fa-github"></i> Report Issue on GitHub
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <span>OBS-TV-Animator v{{ app_version }}</span>
+    </footer>
+    
+    <!-- Include Socket.IO for real-time updates -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../static/js/global.js"></script>
+</body>
+</html>

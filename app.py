@@ -4,15 +4,23 @@ OBS-TV-Animator: A Flask-SocketIO server to display HTML/CSS/JS animations on a 
 Supports dynamic updates triggered via OBS WebSocket, StreamerBot, or REST API.
 """
 
+__version__ = "0.8.0"
+
 import json
 import os
 import hashlib
+import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from functools import wraps
+from threading import Thread
 from flask import Flask, render_template, jsonify, request, send_from_directory, redirect, url_for, flash, session
 from flask_socketio import SocketIO, emit
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+import asyncio
+from thumbnail_service import get_thumbnail_service
+import websockets
+import threading
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'obs-tv-animator-secret-key'
@@ -102,7 +110,9 @@ def get_connected_devices_info():
     """Get information about connected devices"""
     tv_devices = []
     admin_count = 0
+    streamerbot_devices = []
     
+    # Get Socket.IO devices (admin dashboard and TV displays)
     for session_id, device_info in connected_devices.items():
         if device_info['type'] == 'tv':
             tv_devices.append({
@@ -114,17 +124,113 @@ def get_connected_devices_info():
         elif device_info['type'] == 'admin':
             admin_count += 1
     
+    # Get StreamerBot raw WebSocket connections
+    if raw_websocket_server and raw_websocket_server.clients:
+        for client in raw_websocket_server.clients:
+            try:
+                streamerbot_devices.append({
+                    'id': f"streamerbot_{client.remote_address[0]}:{client.remote_address[1]}",
+                    'type': 'streamerbot',
+                    'remote_address': client.remote_address,
+                    'connected': True
+                })
+            except Exception as e:
+                # Handle case where client connection info is not available
+                print(f"Error getting StreamerBot client info: {e}")
+    
+    streamerbot_count = len(streamerbot_devices)
+    
     return {
         'tv_devices': tv_devices,
         'tv_count': len(tv_devices),
         'admin_count': admin_count,
-        'total_count': len(connected_devices)
+        'streamerbot_devices': streamerbot_devices,
+        'streamerbot_count': streamerbot_count,
+        'total_count': len(connected_devices) + streamerbot_count
     }
 
 
 def get_tv_devices_count():
     """Get count of connected TV devices (excluding admin)"""
     return len([d for d in connected_devices.values() if d['type'] == 'tv'])
+
+
+class TriggerFileWatcher:
+    """Watch for file-based triggers from StreamerBot"""
+    def __init__(self, trigger_file_path):
+        self.trigger_file_path = trigger_file_path
+        self.last_modified = 0
+        self.running = True
+        
+    def start_watching(self):
+        """Start watching the trigger file in a background thread"""
+        thread = Thread(target=self._watch_file, daemon=True)
+        thread.start()
+        print(f"🔍 Started watching trigger file: {self.trigger_file_path}")
+        
+    def _watch_file(self):
+        """Watch for changes to the trigger file"""
+        while self.running:
+            try:
+                if os.path.exists(self.trigger_file_path):
+                    current_modified = os.path.getmtime(self.trigger_file_path)
+                    
+                    if current_modified > self.last_modified:
+                        self.last_modified = current_modified
+                        
+                        # Read the animation name from the file
+                        with open(self.trigger_file_path, 'r') as f:
+                            animation_name = f.read().strip()
+                            
+                        if animation_name:
+                            print(f"📂 File trigger received: {animation_name}")
+                            self._handle_trigger(animation_name)
+                            
+                        # Delete the file after processing
+                        os.remove(self.trigger_file_path)
+                        
+            except Exception as e:
+                print(f"Error watching trigger file: {e}")
+                
+            time.sleep(0.1)  # Check every 100ms for fast response
+            
+    def _handle_trigger(self, animation_name):
+        """Handle the animation trigger"""
+        try:
+            # Validate that the media file exists
+            media_path, media_type = find_media_file(animation_name)
+            if not media_path:
+                print(f"❌ Media file '{animation_name}' not found")
+                return
+                
+            # Update state
+            state = load_state()
+            state['current_animation'] = animation_name
+            save_state(state)
+
+            # Emit animation change to all clients
+            socketio.emit('animation_changed', {
+                'current_animation': animation_name,
+                'media_type': media_type,
+                'message': f"Media changed to '{animation_name}' ({media_type}) via file trigger",
+                'refresh_page': True
+            })
+
+            # Emit explicit page refresh
+            socketio.emit('page_refresh', {
+                'reason': 'file_trigger',
+                'new_media': animation_name,
+                'media_type': media_type
+            })
+
+            print(f"✅ Successfully triggered animation: {animation_name} ({media_type})")
+            
+        except Exception as e:
+            print(f"❌ Error handling trigger: {e}")
+            
+    def stop_watching(self):
+        """Stop watching the trigger file"""
+        self.running = False
 
 
 def load_state():
@@ -309,6 +415,55 @@ def trigger():
             "current_animation": media_file,
             "media_type": media_type,
             "message": f"Media updated to '{media_file}' ({media_type})"
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/trigger', methods=['GET'])
+def trigger_get():
+    """Update the current media (animation or video) via GET with URL parameters"""
+    try:
+        media_file = request.args.get('animation')
+        if not media_file:
+            return jsonify({"error": "Missing 'animation' parameter"}), 400
+        
+        # Validate that the media file exists
+        media_path, media_type = find_media_file(media_file)
+        if not media_path:
+            available_media = get_all_media_files()
+            return jsonify({
+                "error": f"Media file '{media_file}' not found",
+                "available_media": available_media,
+                "available_animations": get_animation_files(),
+                "available_videos": get_video_files()
+            }), 404
+        
+        # Update state
+        state = load_state()
+        state['current_animation'] = media_file
+        save_state(state)
+
+        # Emit animation change to all clients
+        socketio.emit('animation_changed', {
+            'current_animation': media_file,
+            'media_type': media_type,
+            'message': f"Media changed to '{media_file}' ({media_type}) via GET trigger",
+            'refresh_page': True
+        })
+
+        # Emit explicit page refresh
+        socketio.emit('page_refresh', {
+            'reason': 'get_trigger',
+            'new_media': media_file,
+            'media_type': media_type
+        })
+
+        return jsonify({
+            "success": True,
+            "current_animation": media_file,
+            "media_type": media_type,
+            "message": f"Media updated to '{media_file}' ({media_type}) via GET"
         }), 200
 
     except Exception as e:
@@ -611,6 +766,161 @@ def handle_video_volume(data):
         print(f"Video volume error: {e}")
 
 
+# Raw WebSocket Server for StreamerBot Integration
+class RawWebSocketServer:
+    def __init__(self, port=8081):
+        self.port = port
+        self.clients = set()
+        self.server = None
+        
+    async def handle_client(self, websocket, path):
+        """Handle incoming raw WebSocket connections from StreamerBot"""
+        print(f"Raw WebSocket client connected from {websocket.remote_address}")
+        self.clients.add(websocket)
+        
+        try:
+            async for message in websocket:
+                try:
+                    # Parse the incoming message
+                    data = json.loads(message)
+                    print(f"Raw WebSocket message received: {data}")
+                    
+                    # Handle different message types
+                    if data.get('action') == 'trigger_animation':
+                        animation = data.get('animation')
+                        # Optional control flags from StreamerBot
+                        instant = data.get('instant', True)  # Default to instant
+                        force_refresh = data.get('force_refresh', True)  # Default to force refresh
+                        source_name = data.get('source', 'streamerbot_websocket')
+                        
+                        if animation:
+                            # Validate the animation file exists
+                            media_path, media_type = find_media_file(animation)
+                            if not media_path:
+                                available_media = get_all_media_files()
+                                error_response = {
+                                    'status': 'error',
+                                    'message': f'Animation file not found: {animation}',
+                                    'available_media': available_media
+                                }
+                                await websocket.send(json.dumps(error_response))
+                                continue
+                            
+                            # Update the current animation state
+                            state = load_state()
+                            old_animation = state.get('current_animation')
+                            state['current_animation'] = animation
+                            save_state(state)
+                            
+                            # Determine media type
+                            media_type = "video" if is_video_file(animation) else "animation"
+                            
+                            # Broadcast to all Socket.IO clients (TV displays)
+                            socketio.emit('animation_changed', {
+                                'previous_animation': old_animation,
+                                'current_animation': animation,
+                                'media_type': media_type,
+                                'message': f"Media changed to '{animation}' ({media_type}) via StreamerBot WebSocket",
+                                'refresh_page': force_refresh,
+                                'instant': instant,
+                                'source': source_name
+                            })
+                            
+                            # Send page refresh command for instant TV browser updates
+                            if force_refresh:
+                                socketio.emit('page_refresh', {
+                                    'animation': animation,
+                                    'instant': instant,
+                                    'source': source_name
+                                })
+                            
+                            # Send confirmation back to StreamerBot
+                            response = {
+                                'status': 'success',
+                                'message': f'Animation changed to {animation}',
+                                'animation': animation,
+                                'instant': instant,
+                                'force_refresh': force_refresh,
+                                'media_type': media_type
+                            }
+                            await websocket.send(json.dumps(response))
+                            print(f"StreamerBot: Animation changed to {animation}")
+                        else:
+                            error_response = {
+                                'status': 'error',
+                                'message': 'Missing animation parameter'
+                            }
+                            await websocket.send(json.dumps(error_response))
+                    
+                    elif data.get('action') == 'get_status':
+                        # Send current status
+                        state = load_state()
+                        status_response = {
+                            'status': 'success',
+                            'current_animation': state.get('current_animation'),
+                            'connected_devices': len(connected_devices),
+                            'server_version': __version__
+                        }
+                        await websocket.send(json.dumps(status_response))
+                        
+                    else:
+                        # Unknown action type
+                        error_response = {
+                            'status': 'error',
+                            'message': f'Unknown action type: {data.get("action")}'
+                        }
+                        await websocket.send(json.dumps(error_response))
+                        
+                except json.JSONDecodeError:
+                    error_response = {
+                        'status': 'error',
+                        'message': 'Invalid JSON format'
+                    }
+                    await websocket.send(json.dumps(error_response))
+                except Exception as e:
+                    error_response = {
+                        'status': 'error',
+                        'message': f'Server error: {str(e)}'
+                    }
+                    await websocket.send(json.dumps(error_response))
+                    print(f"Raw WebSocket error: {e}")
+                    
+        except websockets.exceptions.ConnectionClosed:
+            print(f"Raw WebSocket client disconnected: {websocket.remote_address}")
+        except Exception as e:
+            print(f"Raw WebSocket handler error: {e}")
+        finally:
+            self.clients.discard(websocket)
+    
+    def start_server(self):
+        """Start the raw WebSocket server in a separate thread"""
+        def run_server():
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            
+            try:
+                start_server = websockets.serve(
+                    self.handle_client, 
+                    "0.0.0.0", 
+                    self.port,
+                    ping_interval=20,
+                    ping_timeout=10
+                )
+                
+                print(f"Raw WebSocket server starting on port {self.port} for StreamerBot...")
+                loop.run_until_complete(start_server)
+                loop.run_forever()
+            except Exception as e:
+                print(f"Raw WebSocket server error: {e}")
+        
+        thread = threading.Thread(target=run_server, daemon=True)
+        thread.start()
+        return thread
+
+# Initialize the raw WebSocket server
+raw_websocket_server = RawWebSocketServer(port=8081)
+
+
 # Admin interface routes
 
 @app.route('/admin/login', methods=['GET', 'POST'])
@@ -682,7 +992,8 @@ def admin_dashboard():
     return render_template('admin_dashboard.html', 
                          user_theme=user_theme,
                          current_username=current_user.username,
-                         show_credentials_warning=show_credentials_warning)
+                         show_credentials_warning=show_credentials_warning,
+                         app_version=__version__)
 
 
 @app.route('/admin/manage')
@@ -699,7 +1010,8 @@ def admin_manage_files():
     
     return render_template('admin_manage.html', 
                          user_theme=user_theme,
-                         current_username=current_user.username)
+                         current_username=current_user.username,
+                         app_version=__version__)
 
 
 @app.route('/admin/users')
@@ -716,7 +1028,98 @@ def admin_users():
     
     return render_template('admin_users.html', 
                          user_theme=user_theme,
-                         current_username=current_user.username)
+                         current_username=current_user.username,
+                         app_version=__version__)
+
+
+@app.route('/admin/instructions')
+@admin_required
+def admin_instructions():
+    """Instructions and setup page"""
+    # Get user's theme preference
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        user_theme = user_data.get('theme', 'dark')  # Default to dark
+    except Exception:
+        user_theme = 'dark'  # Fallback to dark theme
+    
+    return render_template('admin_instructions.html', 
+                         user_theme=user_theme,
+                         current_username=current_user.username,
+                         app_version=__version__)
+
+
+@app.route('/admin/instructions/getting-started')
+@admin_required
+def admin_instructions_getting_started():
+    """Getting Started instructions page"""
+    # Get user's theme preference
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        user_theme = user_data.get('theme', 'dark')  # Default to dark
+    except Exception:
+        user_theme = 'dark'  # Fallback to dark theme
+    
+    return render_template('admin_instructions_getting_started.html', 
+                         user_theme=user_theme,
+                         current_username=current_user.username,
+                         app_version=__version__)
+
+
+@app.route('/admin/instructions/obs-integration')
+@admin_required
+def admin_instructions_obs():
+    """OBS Studio Integration instructions page"""
+    # Get user's theme preference
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        user_theme = user_data.get('theme', 'dark')  # Default to dark
+    except Exception:
+        user_theme = 'dark'  # Fallback to dark theme
+    
+    return render_template('admin_instructions_obs.html', 
+                         user_theme=user_theme,
+                         current_username=current_user.username,
+                         app_version=__version__)
+
+
+@app.route('/admin/instructions/streamerbot-integration')
+@admin_required
+def admin_instructions_streamerbot():
+    """StreamerBot Integration instructions page"""
+    # Get user's theme preference
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        user_theme = user_data.get('theme', 'dark')  # Default to dark
+    except Exception:
+        user_theme = 'dark'  # Fallback to dark theme
+    
+    return render_template('admin_instructions_streamerbot.html', 
+                         user_theme=user_theme,
+                         current_username=current_user.username,
+                         app_version=__version__)
+
+
+@app.route('/admin/instructions/troubleshooting')
+@admin_required
+def admin_instructions_troubleshooting():
+    """Troubleshooting & FAQ instructions page"""
+    # Get user's theme preference
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        user_theme = user_data.get('theme', 'dark')  # Default to dark
+    except Exception:
+        user_theme = 'dark'  # Fallback to dark theme
+    
+    return render_template('admin_instructions_troubleshooting.html', 
+                         user_theme=user_theme,
+                         current_username=current_user.username,
+                         app_version=__version__)
 
 
 def save_users_config(users_data):
@@ -902,6 +1305,8 @@ def admin_status():
             'connected_clients': devices_info['tv_count'],  # Only count TV devices, not admin
             'tv_devices': devices_info['tv_devices'],
             'admin_count': devices_info['admin_count'],
+            'streamerbot_devices': devices_info['streamerbot_devices'],
+            'streamerbot_count': devices_info['streamerbot_count'],
             'total_connections': devices_info['total_count'],
             'available_animations': get_animation_files(),
             'available_videos': get_video_files(),
@@ -980,6 +1385,34 @@ def admin_upload_file():
         file_path = destination_dir / filename
         file.save(str(file_path))
         
+        # Generate thumbnail asynchronously
+        try:
+            thumbnail_service = get_thumbnail_service("http://localhost:8080")
+            
+            def generate_thumbnail_background():
+                """Generate thumbnail in background thread"""
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    success, thumbnail_name = loop.run_until_complete(
+                        thumbnail_service.generate_thumbnail(filename, file_path)
+                    )
+                    loop.close()
+                    
+                    if success:
+                        app.logger.info(f"Generated thumbnail for uploaded file: {filename}")
+                    else:
+                        app.logger.warning(f"Failed to generate thumbnail for uploaded file: {filename}")
+                        
+                except Exception as e:
+                    app.logger.error(f"Thumbnail generation error for {filename}: {str(e)}")
+            
+            # Start thumbnail generation in background thread
+            Thread(target=generate_thumbnail_background, daemon=True).start()
+            
+        except Exception as e:
+            app.logger.warning(f"Could not start thumbnail generation for {filename}: {str(e)}")
+        
         return jsonify({
             'success': True,
             'filename': filename,
@@ -1016,6 +1449,17 @@ def admin_delete_file(file_type, filename):
         # Delete file
         file_path.unlink()
         
+        # Clean up thumbnail if it exists
+        try:
+            thumbnail_service = get_thumbnail_service("http://localhost:8080")
+            # Use get_thumbnail_path directly for more reliable deletion
+            thumbnail_path = thumbnail_service.get_thumbnail_path(filename)
+            if thumbnail_path.exists():
+                thumbnail_path.unlink()
+                app.logger.info(f"Deleted thumbnail for: {filename}")
+        except Exception as e:
+            app.logger.warning(f"Could not delete thumbnail for {filename}: {str(e)}")
+        
         return jsonify({
             'success': True,
             'message': f'File {filename} deleted successfully'
@@ -1030,26 +1474,215 @@ def admin_delete_file(file_type, filename):
 def admin_thumbnail(filename):
     """Generate or serve thumbnails for files"""
     try:
-        # For HTML files, return a simple SVG placeholder
-        if filename.endswith('.html'):
+        # Get the thumbnail service
+        thumbnail_service = get_thumbnail_service("http://localhost:8080")
+        
+        # Try to serve existing thumbnail
+        thumbnail_path = thumbnail_service.serve_thumbnail(filename)
+        if thumbnail_path:
+            return send_from_directory(
+                str(thumbnail_path.parent), 
+                thumbnail_path.name,
+                mimetype='image/png'
+            )
+        
+        # If no thumbnail exists, try to generate one
+        file_ext = filename.lower().split('.')[-1]
+        
+        if file_ext in ['html', 'htm']:
+            # Check if HTML file exists
+            html_path = Path(ANIMATIONS_DIR) / filename
+            if html_path.exists():
+                # Generate thumbnail asynchronously
+                try:
+                    # Create event loop for async thumbnail generation
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    success, thumbnail_name = loop.run_until_complete(
+                        thumbnail_service.generate_thumbnail(filename, html_path)
+                    )
+                    loop.close()
+                    
+                    if success:
+                        # Serve the newly generated thumbnail
+                        thumbnail_path = thumbnail_service.serve_thumbnail(filename)
+                        if thumbnail_path:
+                            return send_from_directory(
+                                str(thumbnail_path.parent), 
+                                thumbnail_path.name,
+                                mimetype='image/png'
+                            )
+                except Exception as e:
+                    app.logger.warning(f"Failed to generate HTML thumbnail for {filename}: {str(e)}")
+        
+        elif file_ext in ['mp4', 'webm', 'mov', 'avi', 'mkv']:
+            # Check if video file exists
+            video_path = Path(VIDEOS_DIR) / filename
+            if video_path.exists():
+                # Generate thumbnail synchronously (FFmpeg)
+                try:
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                    success, thumbnail_name = loop.run_until_complete(
+                        thumbnail_service.generate_thumbnail(filename, video_path)
+                    )
+                    loop.close()
+                    
+                    if success:
+                        # Serve the newly generated thumbnail
+                        thumbnail_path = thumbnail_service.serve_thumbnail(filename)
+                        if thumbnail_path:
+                            return send_from_directory(
+                                str(thumbnail_path.parent), 
+                                thumbnail_path.name,
+                                mimetype='image/png'
+                            )
+                except Exception as e:
+                    app.logger.warning(f"Failed to generate video thumbnail for {filename}: {str(e)}")
+        
+        # Fallback to SVG placeholders if thumbnail generation fails
+        if file_ext in ['html', 'htm']:
             svg_content = f'''<?xml version="1.0" encoding="UTF-8"?>
-<svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">
-  <rect width="200" height="150" fill="#2c3e50"/>
-  <text x="100" y="80" text-anchor="middle" fill="white" font-family="Arial" font-size="14">{filename}</text>
-  <text x="100" y="100" text-anchor="middle" fill="#bdc3c7" font-family="Arial" font-size="10">HTML Animation</text>
+<svg width="320" height="180" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="180" fill="#2c3e50"/>
+  <text x="160" y="95" text-anchor="middle" fill="white" font-family="Arial" font-size="16">{filename[:25]}{'...' if len(filename) > 25 else ''}</text>
+  <text x="160" y="115" text-anchor="middle" fill="#bdc3c7" font-family="Arial" font-size="12">HTML Animation</text>
 </svg>'''
             return svg_content, 200, {'Content-Type': 'image/svg+xml'}
         
-        # For video files, return a video placeholder
         else:
             svg_content = f'''<?xml version="1.0" encoding="UTF-8"?>
-<svg width="200" height="150" xmlns="http://www.w3.org/2000/svg">
-  <rect width="200" height="150" fill="#34495e"/>
-  <polygon points="80,60 80,90 110,75" fill="white"/>
-  <text x="100" y="110" text-anchor="middle" fill="white" font-family="Arial" font-size="12">{filename}</text>
-  <text x="100" y="125" text-anchor="middle" fill="#bdc3c7" font-family="Arial" font-size="9">Video File</text>
+<svg width="320" height="180" xmlns="http://www.w3.org/2000/svg">
+  <rect width="320" height="180" fill="#34495e"/>
+  <polygon points="140,70 140,110 180,90" fill="white"/>
+  <text x="160" y="135" text-anchor="middle" fill="white" font-family="Arial" font-size="14">{filename[:25]}{'...' if len(filename) > 25 else ''}</text>
+  <text x="160" y="155" text-anchor="middle" fill="#bdc3c7" font-family="Arial" font-size="10">Video File</text>
 </svg>'''
             return svg_content, 200, {'Content-Type': 'image/svg+xml'}
+        
+    except Exception as e:
+        app.logger.error(f"Thumbnail generation error for {filename}: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/admin/api/thumbnails/generate', methods=['POST'])
+@admin_required
+def admin_generate_thumbnails():
+    """Generate thumbnails for all files"""
+    try:
+        thumbnail_service = get_thumbnail_service("http://localhost:8080")
+        
+        def generate_all_thumbnails():
+            """Generate thumbnails for all files in background"""
+            try:
+                loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop)
+                
+                results = loop.run_until_complete(
+                    thumbnail_service.generate_all_thumbnails(
+                        Path(ANIMATIONS_DIR), 
+                        Path(VIDEOS_DIR)
+                    )
+                )
+                
+                loop.close()
+                
+                # Log results
+                app.logger.info(f"Thumbnail generation complete: {results}")
+                
+                # Cleanup orphaned thumbnails
+                cleaned_count = thumbnail_service.cleanup_orphaned_thumbnails(
+                    Path(ANIMATIONS_DIR), 
+                    Path(VIDEOS_DIR)
+                )
+                results['orphaned_cleaned'] = cleaned_count
+                
+                return results
+                
+            except Exception as e:
+                app.logger.error(f"Bulk thumbnail generation failed: {str(e)}")
+                return {'error': str(e)}
+        
+        # Start generation in background thread
+        Thread(target=generate_all_thumbnails, daemon=True).start()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Thumbnail generation started in background'
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/admin/api/thumbnails/status', methods=['GET'])
+@admin_required
+def admin_thumbnails_status():
+    """Get thumbnail generation status"""
+    try:
+        thumbnail_service = get_thumbnail_service("http://localhost:8080")
+        
+        # Count existing thumbnails
+        thumbnail_count = len(list(thumbnail_service.thumbnails_dir.glob('*.png')))
+        
+        # Count files that need thumbnails
+        html_files = list(Path(ANIMATIONS_DIR).glob('*.html')) if Path(ANIMATIONS_DIR).exists() else []
+        video_extensions = ['*.mp4', '*.webm', '*.mov', '*.avi', '*.mkv']
+        video_files = []
+        
+        if Path(VIDEOS_DIR).exists():
+            for pattern in video_extensions:
+                video_files.extend(list(Path(VIDEOS_DIR).glob(pattern)))
+        
+        total_files = len(html_files) + len(video_files)
+        
+        # Check which files have thumbnails
+        files_with_thumbnails = 0
+        for html_file in html_files:
+            if thumbnail_service.thumbnail_exists(html_file.name, html_file):
+                files_with_thumbnails += 1
+        
+        for video_file in video_files:
+            if thumbnail_service.thumbnail_exists(video_file.name, video_file):
+                files_with_thumbnails += 1
+        
+        return jsonify({
+            'total_files': total_files,
+            'html_files': len(html_files),
+            'video_files': len(video_files),
+            'thumbnail_count': thumbnail_count,
+            'files_with_thumbnails': files_with_thumbnails,
+            'completion_percentage': round((files_with_thumbnails / total_files * 100) if total_files > 0 else 100, 1)
+        })
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/admin/api/thumbnails/debug', methods=['GET'])
+@admin_required
+def admin_thumbnails_debug():
+    """Debug endpoint to list actual thumbnail files"""
+    try:
+        thumbnail_service = get_thumbnail_service("http://localhost:8080")
+        
+        # List all PNG files in thumbnails directory
+        thumbnail_files = list(thumbnail_service.thumbnails_dir.glob('*.png'))
+        
+        debug_info = {
+            'thumbnails_directory': str(thumbnail_service.thumbnails_dir),
+            'directory_exists': thumbnail_service.thumbnails_dir.exists(),
+            'thumbnail_files': [
+                {
+                    'filename': f.name,
+                    'size_bytes': f.stat().st_size if f.exists() else 0,
+                    'modified': f.stat().st_mtime if f.exists() else 0
+                } for f in thumbnail_files
+            ],
+            'total_thumbnails': len(thumbnail_files)
+        }
+        
+        return jsonify(debug_info)
         
     except Exception as e:
         return jsonify({'error': str(e)}), 500
@@ -1174,16 +1807,33 @@ if __name__ == '__main__':
     print("  GET  /videos/<file>  - Serve video files")
     print("  GET  /health         - Health check")
     print("=" * 84)
-    print("WebSocket Events (for OBS/StreamerBot):")
-    print("  trigger_animation - Change media: {\"animation\": \"file.html|mp4\"}")
-    print("  scene_change      - OBS scene change: {\"scene_name\": \"Gaming\"}")
-    print("  streamerbot_event - StreamerBot events")
-    print("  video_control     - Video controls: {\"action\": \"play|pause|seek\", \"value\": 0}")
-    print("  get_status        - Get current status")
+    print("WebSocket Servers:")
+    print("  Socket.IO (port 8080) - OBS Browser Sources, Admin Dashboard")
+    print("    Events: trigger_animation, scene_change, video_control, get_status")
+    print("  Raw WebSocket (port 8081) - StreamerBot Integration") 
+    print("    Events: trigger_animation, get_status")
     print("=" * 84)
     print("Media Directories:")
     print(f"  Animations: {ANIMATIONS_DIR}")
     print(f"  Videos: {VIDEOS_DIR}")
     print("=" * 84)
+    print("StreamerBot Integration:")
+    print("  File Trigger: Write animation name to data/trigger.txt")
+    print("  C# Code: Use streamerbot_file_trigger.cs")
+    print("=" * 84)
+    
+    # Initialize file trigger watcher for StreamerBot
+    trigger_file = DATA_DIR / "trigger.txt"
+    file_watcher = TriggerFileWatcher(str(trigger_file))
+    file_watcher.start_watching()
+    
+    # Start the raw WebSocket server for StreamerBot
+    print("🚀 Starting Raw WebSocket server on port 8081 for StreamerBot...")
+    websocket_thread = raw_websocket_server.start_server()
+    
+    # Give the WebSocket server a moment to start
+    import time
+    time.sleep(1)
+    print("✓ Raw WebSocket server ready!")
     
     socketio.run(app, host='0.0.0.0', port=8080, debug=False, allow_unsafe_werkzeug=True)
