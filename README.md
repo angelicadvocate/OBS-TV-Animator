@@ -1,4 +1,4 @@
-# OBS-TV-Animator v0.8.0
+# OBS-TV-Animator v0.8.6
 
 > ⚠️ **This project is still in development and not production-ready.**
 
@@ -66,10 +66,18 @@ You only need **one** of the following installed on your system:
    docker compose up -d --build
    ```
 
+   > 📡 **Port Note:** This application requires 2 ports - the main port (8080) for web interface & Socket.IO, and a raw WebSocket port (8081) for StreamerBot integration. The raw WebSocket port is always main port + 1. When changing the main port via `PORT` environment variable, ensure both ports are available.
+
 3. **Access the web interfaces:**
    - **Admin Panel:** http://[DOCKER_HOST_IP]:8080/admin
    - **TV Display:** http://[DOCKER_HOST_IP]:8080
-   - **WebSocket API:** ws://[DOCKER_HOST_IP]:8080/socket.io/
+   - **Socket.IO API:** ws://[DOCKER_HOST_IP]:8080/socket.io/ *(Flask-SocketIO on main port)*
+   - **Raw WebSocket:** ws://[DOCKER_HOST_IP]:8081/ *(StreamerBot integration)*
+
+4. **Check out the Getting Started page**
+  - From the admin panel click the button for "Setup/Instructions"
+  - Then click the "Getting Started" button on that page.
+  - These pages will contain additional information for setup and usage.
 
 ### Default Login
 
@@ -143,8 +151,9 @@ The current animation or video will auto-play fullscreen. Changes appear instant
 
 ## 🧩 Developer Notes
 
-- Built with **Flask-SocketIO + Docker** for lightweight, real-time media control
-- Default server port: **8080**
+- Built with **Flask-SocketIO + Docker** for lightweight, real-time media control  
+- Default ports: **8080** (web interface, admin panel, socket.io) + **8081** (raw WebSocket for StreamerBot)
+- raw WebSocket port is automatically set to main port + 1
 
 ---
 

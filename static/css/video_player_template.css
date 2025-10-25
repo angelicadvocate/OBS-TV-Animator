@@ -29,30 +29,7 @@ body {
     background: #000;
 }
 
-.status-indicator {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    padding: 8px 16px;
-    background: rgba(0, 0, 0, 0.7);
-    border-radius: 15px;
-    color: white;
-    font-size: 12px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    z-index: 1000;
-    transition: opacity 0.3s ease;
-}
-
-.connected {
-    background: rgba(76, 175, 80, 0.7) !important;
-    border-color: #4caf50 !important;
-}
-
-.disconnected {
-    background: rgba(244, 67, 54, 0.7) !important;
-    border-color: #f44336 !important;
-}
+/* Status indicator styles now handled by ota-integration.css */
 
 .video-info {
     position: fixed;

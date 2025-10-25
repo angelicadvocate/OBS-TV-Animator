@@ -11,17 +11,19 @@ Requirements:
 - pip install -r requirements.txt
 
 Usage:
-- Windows: python dev_local.py
-- macOS/Linux: ./dev_local.py
+- All platforms: python z_extras/dev_local.py
 """
 
 import os
 import sys
 from pathlib import Path
 
-# Add the project root to the Python path
-project_root = Path(__file__).parent
+# Add the project root to the Python path (parent directory of z_extras)
+project_root = Path(__file__).parent.parent
 sys.path.insert(0, str(project_root))
+
+# Change to project root directory so Flask can find templates, static files, etc.
+os.chdir(project_root)
 
 # Set development environment variables
 os.environ['FLASK_ENV'] = 'development'

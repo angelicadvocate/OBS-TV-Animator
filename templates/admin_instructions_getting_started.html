@@ -94,51 +94,37 @@
 
             <div class="card">
                 <h2><i class="fa-solid fa-tv"></i> Smart TV Setup</h2>
+                
+                <!-- Success Message -->
+                <div class="success-banner">
+                    <i class="fa-solid fa-check-circle"></i>
+                    <div>
+                        <h4>Congratulations!</h4>
+                        <p>If you've made it here, you have successfully setup Docker with OBS-TV-Animator. Make sure that your bind mounts were added correctly in the <code>docker-compose.yml</code> or through Docker GUI/Docker Desktop to ensure that files and settings persist across restarts.</p>
+                    </div>
+                </div>
+                
                 <div class="setup-steps">
                     <div class="step">
                         <span class="step-number">1</span>
                         <div class="step-content">
-                            <h4>Find Your Server IP Address</h4>
-                            <p>Your OBS-TV-Animator server is running at:</p>
-                            <code class="ip-display">http://[YOUR_DOCKER_HOST_IP]:8080</code>
-                            <p class="hint">Replace [YOUR_DOCKER_HOST_IP] with your actual IP address (e.g., 192.168.1.100)</p>
-                            <p><strong>To find your IP address:</strong></p>
-                            <ul>
-                                <li><strong>Windows:</strong> Open Command Prompt and run <code>ipconfig</code></li>
-                                <li><strong>macOS/Linux:</strong> Open Terminal and run <code>ifconfig</code> or <code>ip addr</code></li>
-                                <li>Look for the IP address on your local network (usually starts with 192.168 or 10.0)</li>
-                            </ul>
-                        </div>
-                    </div>
-                    
-                    <div class="step">
-                        <span class="step-number">2</span>
-                        <div class="step-content">
-                            <h4>Verify Docker Container is Running</h4>
-                            <p>Before proceeding, make sure your container is running:</p>
-                            <pre class="code-block">docker ps</pre>
-                            <p>You should see <code>obs-tv-animator</code> in the list with status "Up".</p>
-                        </div>
-                    </div>
-
-                    <div class="step">
-                        <span class="step-number">3</span>
-                        <div class="step-content">
                             <h4>Test Connection from Computer</h4>
                             <p>First, test that the server is working by opening this URL in your computer's web browser:</p>
-                            <code class="ip-display">http://[YOUR_IP]:8080</code>
+                            <code class="ip-display">http://[YOUR_IP]:[PORT]</code>
                             <p>You should see an animation playing. If not, check your Docker setup and firewall settings.</p>
+                            <p class="hint"><strong>Port:</strong> Default is 8080, but check your docker-compose.yml for the actual port mapping</p>
+                            <p class="hint"><strong>Find your IP:</strong> Windows: <code>ipconfig</code> | macOS/Linux: <code>ifconfig</code></p>
                         </div>
                     </div>
 
                     <div class="step">
-                        <span class="step-number">4</span>
+                        <span class="step-number">2</span>
                         <div class="step-content">
                             <h4>Connect Your Smart TV</h4>
                             <p>On your Smart TV:</p>
                             <ol>
                                 <li>Open the web browser app (available on most modern Smart TVs)</li>
-                                <li>Navigate to: <code>http://[YOUR_IP]:8080</code></li>
+                                <li>Navigate to: <code>http://[YOUR_IP]:[PORT]</code></li>
                                 <li>The current animation should auto-play fullscreen</li>
                                 <li>Changes will appear instantly when triggered from the admin panel</li>
                             </ol>
@@ -146,7 +132,7 @@
                     </div>
 
                     <div class="step">
-                        <span class="step-number">5</span>
+                        <span class="step-number">3</span>
                         <div class="step-content">
                             <h4>Test Animation Switching</h4>
                             <p>From the Admin Dashboard:</p>
@@ -155,6 +141,214 @@
                                 <li>Click "Play Now" on any animation</li>
                                 <li>Watch the TV update in real-time!</li>
                             </ol>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fa-solid fa-folder-open"></i> Managing Your Animation Files</h2>
+                <p>Once your TV is connected, you can upload and manage your own custom animations and videos.</p>
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-upload"></i></span>
+                        <div class="step-content">
+                            <h4>Upload Custom Content</h4>
+                            <p>Visit the <a href="/admin/manage" class="inline-link">Manage Files</a> page to:</p>
+                            <ul>
+                                <li>Upload HTML animation files (.html)</li>
+                                <li>Upload video files (.mp4, .webm, .mov, etc.)</li>
+                                <li>Drag and drop files for quick upload</li>
+                                <li>Preview animations before switching to them</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-code"></i></span>
+                        <div class="step-content">
+                            <h4>StreamerBot Integration</h4>
+                            <p>Each animation file includes easy integration buttons:</p>
+                            <ul>
+                                <li><strong>StreamerBot C#:</strong> Copy ready-to-use C# code for StreamerBot actions</li>
+                                <li><strong>StreamerBot HTTP:</strong> Copy HTTP URLs for legacy integration</li>
+                                <li>Connect animations to follows, donations, subscriptions, and more!</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fa-solid fa-users-cog"></i> User Management</h2>
+                <p>Secure your admin panel by managing user accounts and changing default credentials.</p>
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-user-plus"></i></span>
+                        <div class="step-content">
+                            <h4>Add or Remove Users</h4>
+                            <p>To manage user accounts, visit the <a href="/admin/users" class="inline-link">Manage Users</a> page where you can:</p>
+                            <ul>
+                                <li>Add new admin users with custom usernames and passwords</li>
+                                <li>Remove users who no longer need access</li>
+                                <li>View login timestamps for security monitoring</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-shield-halved"></i></span>
+                        <div class="step-content">
+                            <h4>Security Recommendations</h4>
+                            <p><strong>Important:</strong> If you haven't already done so, we recommend changing the default username and password and removing the old admin account.</p>
+                            <ul>
+                                <li>Create a new admin user with a strong, unique password</li>
+                                <li>Log in with the new account to test it works</li>
+                                <li>Delete the default <code>admin</code> account for security</li>
+                            </ul>
+                            <p class="hint"><strong>Note:</strong> You cannot delete an account that's currently logged in. Switch to your new account first, then delete the default credentials.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fa-solid fa-palette"></i> Understanding Animation Types</h2>
+                <p>OBS-TV-Animator supports both HTML animations and video files, each with their own advantages.</p>
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-code"></i></span>
+                        <div class="step-content">
+                            <h4>HTML Animations</h4>
+                            <p>Interactive web-based animations with CSS and JavaScript:</p>
+                            <ul>
+                                <li><strong>Advantages:</strong> Lightweight, scalable, interactive, real-time data integration</li>
+                                <li><strong>Best for:</strong> Text overlays, countdowns, subscriber alerts, dynamic content</li>
+                                <li><strong>File types:</strong> .html files with embedded CSS/JS</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-video"></i></span>
+                        <div class="step-content">
+                            <h4>Video Files</h4>
+                            <p>Pre-rendered video content for high-quality animations:</p>
+                            <ul>
+                                <li><strong>Advantages:</strong> Consistent playback, complex effects, professional quality</li>
+                                <li><strong>Best for:</strong> Complex animations, transitions, branded content</li>
+                                <li><strong>File types:</strong> .mp4, .webm, .mov, .avi</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fa-solid fa-tv"></i> Smart TV Best Practices</h2>
+                <p>For optimal performance and compatibility on Smart TV displays, follow these guidelines:</p>
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-mobile-alt"></i></span>
+                        <div class="step-content">
+                            <h4>HTML Animation Tips</h4>
+                            <ul>
+                                <li><strong>Use web-safe fonts:</strong> Arial, Helvetica, sans-serif for maximum compatibility</li>
+                                <li><strong>Avoid complex JavaScript:</strong> Keep animations simple for better TV browser performance</li>
+                                <li><strong>Test responsiveness:</strong> Ensure animations work at various screen resolutions</li>
+                                <li><strong>Use high contrast:</strong> Bold colors and clear text show better on TV screens</li>
+                                <li><strong>Minimize network requests:</strong> Embed resources when possible to reduce loading times</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-plug"></i></span>
+                        <div class="step-content">
+                            <h4>OBS-TV-Animator Integration</h4>
+                            <p>For full system integration, add these lines to your custom HTML animations:</p>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>HTML Head Section</span>
+                                    <button class="copy-btn" onclick="copyToClipboard(this, '&lt;!-- OBS-TV-Animator Integration --&gt;\n&lt;link rel=&quot;stylesheet&quot; href=&quot;/static/css/ota-integration.css&quot;&gt;')">
+                                        <i class="fa-solid fa-copy"></i> Copy
+                                    </button>
+                                </div>
+                                <pre><code>&lt;!-- OBS-TV-Animator Integration --&gt;
+&lt;link rel="stylesheet" href="/static/css/ota-integration.css"&gt;</code></pre>
+                            </div>
+                            <div class="code-block">
+                                <div class="code-header">
+                                    <span>Before Closing Body Tag</span>
+                                    <button class="copy-btn" onclick="copyToClipboard(this, '&lt;!-- Socket.IO and OTA Integration --&gt;\n&lt;script src=&quot;https://cdn.socket.io/4.7.2/socket.io.min.js&quot;&gt;&lt;/script&gt;\n&lt;script src=&quot;/static/js/ota-integration.js&quot;&gt;&lt;/script&gt;\n&lt;script&gt;\n  document.addEventListener(&#39;DOMContentLoaded&#39;, () =&gt; {\n    window.otaIntegration = new OTAIntegration(&#39;mainElement&#39;);\n  });\n&lt;/script&gt;')">
+                                        <i class="fa-solid fa-copy"></i> Copy
+                                    </button>
+                                </div>
+                                <pre><code>&lt;!-- Socket.IO and OTA Integration --&gt;
+&lt;script src="https://cdn.socket.io/4.7.2/socket.io.min.js"&gt;&lt;/script&gt;
+&lt;script src="/static/js/ota-integration.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  document.addEventListener('DOMContentLoaded', () =&gt; {
+    window.otaIntegration = new OTAIntegration('mainElement');
+  });
+&lt;/script&gt;</code></pre>
+                            </div>
+                            <ul>
+                                <li><strong>Connection Status:</strong> Adds a status dot in the top-right corner</li>
+                                <li><strong>Page Refresh:</strong> Enables seamless content switching</li>
+                                <li><strong>Flash Effects:</strong> Visual feedback when animations change</li>
+                                <li><strong>WebSocket Integration:</strong> Real-time communication with OTA server</li>
+                                <li><strong>Replace 'mainElement':</strong> Use the ID of your main animation element for flash effects</li>
+                            </ul>
+                            <p class="hint"><i class="fa-solid fa-lightbulb"></i> <strong>Optional:</strong> Animations work without integration, but these features enhance the user experience.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-tachometer-alt"></i></span>
+                        <div class="step-content">
+                            <h4>Performance Guidelines</h4>
+                            <ul>
+                                <li><strong>Keep file sizes reasonable:</strong> HTML animations under 1MB, videos under 50MB</li>
+                                <li><strong>Optimize images:</strong> Use compressed formats (WebP, optimized PNG/JPG)</li>
+                                <li><strong>Limit animation complexity:</strong> Too many moving elements can cause stuttering</li>
+                                <li><strong>Test on actual TV hardware:</strong> TV browsers may perform differently than desktop</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><i class="fa-solid fa-shield-alt"></i> Backup & Data Persistence</h2>
+                <p>Protect your animations, settings, and user accounts during container updates or migrations.</p>
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-folder-tree"></i></span>
+                        <div class="step-content">
+                            <h4>Important Directories</h4>
+                            <p>These directories contain all your persistent data and should be backed up:</p>
+                            <ul>
+                                <li><code>animations/</code> - Your HTML animation files</li>
+                                <li><code>videos/</code> - Your uploaded video files</li>
+                                <li><code>data/</code> - User accounts, settings, and thumbnails</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-arrows-rotate"></i></span>
+                        <div class="step-content">
+                            <h4>Migration Process</h4>
+                            <p>To migrate or reinstall your container while preserving data:</p>
+                            <ol>
+                                <li>Copy the <code>animations/</code>, <code>videos/</code>, and <code>data/</code> directories to a safe location</li>
+                                <li>Install the new container or move to a new system</li>
+                                <li>Restore the directories to the same locations</li>
+                                <li>Update your <code>docker-compose.yml</code> to map these directories correctly</li>
+                                <li>Start the container - all settings, accounts, and files will be preserved</li>
+                            </ol>
+                            <p class="hint"><strong>Tip:</strong> Regular backups of these directories ensure you never lose your custom content or configuration.</p>
                         </div>
                     </div>
                 </div>
@@ -181,7 +375,7 @@
                         <span class="step-number"><i class="fa-solid fa-shield-alt"></i></span>
                         <div class="step-content">
                             <h4>Firewall Configuration</h4>
-                            <p>Ensure port 8080 is allowed through your firewall:</p>
+                            <p>Ensure your chosen port (default 8080) is allowed through your firewall:</p>
                             <ul>
                                 <li><strong>Windows:</strong> Windows Defender Firewall may block the port</li>
                                 <li><strong>macOS:</strong> Check System Preferences → Security & Privacy → Firewall</li>

@@ -4,7 +4,7 @@ OBS-TV-Animator: A Flask-SocketIO server to display HTML/CSS/JS animations on a 
 Supports dynamic updates triggered via OBS WebSocket, StreamerBot, or REST API.
 """
 
-__version__ = "0.8.0"
+__version__ = "0.8.6"
 
 import json
 import os
@@ -34,6 +34,9 @@ login_manager.login_view = 'admin_login'
 login_manager.login_message = 'Please log in to access the admin panel.'
 
 # Configuration
+MAIN_PORT = int(os.environ.get('PORT', 8080))
+WEBSOCKET_PORT = MAIN_PORT + 1  # Raw WebSocket port is always main port + 1
+
 ANIMATIONS_DIR = Path(__file__).parent / "animations"
 VIDEOS_DIR = Path(__file__).parent / "videos"
 DATA_DIR = Path(__file__).parent / "data"
@@ -367,6 +370,13 @@ def serve_video_file(filename):
     return send_from_directory(VIDEOS_DIR, filename)
 
 
+@app.route('/mobile')
+@app.route('/control')
+def mobile_control():
+    """Serve mobile stream control interface"""
+    return render_template('mobile_control.html')
+
+
 @app.route('/trigger', methods=['POST'])
 def trigger():
     """Update the current media (animation or video) via JSON payload"""
@@ -488,6 +498,32 @@ def list_animations():
         "animation_count": len(animations),
         "video_count": len(videos)
     }), 200
+
+
+@app.route('/stop', methods=['POST'])
+def stop_animations():
+    """Stop all animations and clear current media"""
+    try:
+        state = load_state()
+        state['current_animation'] = None
+        
+        # Save state
+        with open(STATE_FILE, 'w') as f:
+            json.dump(state, f, indent=2)
+        
+        # Emit WebSocket event to notify all connected devices
+        socketio.emit('animation_stopped', {
+            'message': 'All animations stopped',
+            'timestamp': time.time()
+        })
+
+        return jsonify({
+            "success": True,
+            "message": "All animations stopped"
+        }), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 @app.route('/health', methods=['GET'])
@@ -918,7 +954,7 @@ class RawWebSocketServer:
         return thread
 
 # Initialize the raw WebSocket server
-raw_websocket_server = RawWebSocketServer(port=8081)
+raw_websocket_server = RawWebSocketServer(port=WEBSOCKET_PORT)
 
 
 # Admin interface routes
@@ -1346,6 +1382,46 @@ def admin_list_files():
             })
         
         return jsonify({'files': files})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
+@app.route('/api/files')
+def list_files():
+    """Public API endpoint to list all files for mobile interface"""
+    try:
+        files = []
+        
+        # Add animation files
+        for filename in get_animation_files():
+            file_path = ANIMATIONS_DIR / filename
+            files.append({
+                'name': filename,
+                'type': 'animation',
+                'size': file_path.stat().st_size if file_path.exists() else 0,
+                'url': f'/animations/{filename}',
+                'thumbnail': f'/admin/api/thumbnail/{filename}'
+            })
+        
+        # Add video files  
+        for filename in get_video_files():
+            file_path = VIDEOS_DIR / filename
+            files.append({
+                'name': filename,
+                'type': 'video',
+                'size': file_path.stat().st_size if file_path.exists() else 0,
+                'url': f'/videos/{filename}',
+                'thumbnail': f'/admin/api/thumbnail/{filename}'
+            })
+        
+        # Get current animation state
+        state = load_state()
+        current_animation = state.get('current_animation', None)
+        
+        return jsonify({
+            'files': files,
+            'current_animation': current_animation
+        })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
@@ -1800,26 +1876,38 @@ if __name__ == '__main__':
     print(f"Available animations: {get_animation_files()}")
     print(f"Available videos: {get_video_files()}")
     print("=" * 84)
-    print("HTTP API Routes:")
-    print("  GET  /               - View current media on TV")
-    print("  POST /trigger        - Update media (JSON: {\"animation\": \"file.html|mp4\"})")
+    print("🌐 HTTP API Routes:")
+    print("  GET  /               - Smart TV display (main animation endpoint)")
+    print("  GET  /admin          - Admin dashboard and file management")
+    print("  POST /trigger        - Update media via API (JSON: {\"animation\": \"file.html|mp4\"})")
     print("  GET  /animations     - List available media files")
-    print("  GET  /videos/<file>  - Serve video files")
-    print("  GET  /health         - Health check")
+    print("  GET  /health         - Health check endpoint")
     print("=" * 84)
-    print("WebSocket Servers:")
-    print("  Socket.IO (port 8080) - OBS Browser Sources, Admin Dashboard")
-    print("    Events: trigger_animation, scene_change, video_control, get_status")
-    print("  Raw WebSocket (port 8081) - StreamerBot Integration") 
-    print("    Events: trigger_animation, get_status")
+    print("🔌 WebSocket Integration:")
+    print(f"  Socket.IO (port {MAIN_PORT}) - Real-time communication")
+    print("    • Admin dashboard updates")
+    print("    • Animation page refresh & status")
+    print("    • OTA Integration (/static/js/ota-integration.js)")
+    print(f"  Raw WebSocket (port {WEBSOCKET_PORT}) - StreamerBot compatibility")
+    print("    • Legacy integration support")
     print("=" * 84)
-    print("Media Directories:")
-    print(f"  Animations: {ANIMATIONS_DIR}")
-    print(f"  Videos: {VIDEOS_DIR}")
+    print("📁 Media Storage:")
+    print(f"  Animations: {ANIMATIONS_DIR} ({len(get_animation_files())} files)")
+    print(f"  Videos: {VIDEOS_DIR} ({len(get_video_files())} files)")
+    print(f"  Data: {DATA_DIR} (users, settings, thumbnails)")
     print("=" * 84)
-    print("StreamerBot Integration:")
-    print("  File Trigger: Write animation name to data/trigger.txt")
-    print("  C# Code: Use streamerbot_file_trigger.cs")
+    print("🤖 StreamerBot Integration:")
+    print("  • Use 'StreamerBot C#' buttons in admin file management")
+    print("  • Copy ready-to-use C# code for each animation")
+    print("  • HTTP triggers also available for legacy setups")
+    print("  • Visit /admin/instructions/streamerbot-integration for setup guide")
+    print("=" * 84)
+    print("✨ Custom Animation Development:")
+    print("  • Add OTA Integration to your HTML files:")
+    print("    <link rel=\"stylesheet\" href=\"/static/css/ota-integration.css\">")
+    print("    <script src=\"/static/js/ota-integration.js\"></script>")
+    print("  • Enables status indicators, WebSocket sync, and page refresh")
+    print("  • Visit /admin/instructions/getting-started for complete guide")
     print("=" * 84)
     
     # Initialize file trigger watcher for StreamerBot
@@ -1828,7 +1916,7 @@ if __name__ == '__main__':
     file_watcher.start_watching()
     
     # Start the raw WebSocket server for StreamerBot
-    print("🚀 Starting Raw WebSocket server on port 8081 for StreamerBot...")
+    print(f"🚀 Starting Raw WebSocket server on port {WEBSOCKET_PORT} for StreamerBot...")
     websocket_thread = raw_websocket_server.start_server()
     
     # Give the WebSocket server a moment to start
@@ -1836,4 +1924,4 @@ if __name__ == '__main__':
     time.sleep(1)
     print("✓ Raw WebSocket server ready!")
     
-    socketio.run(app, host='0.0.0.0', port=8080, debug=False, allow_unsafe_werkzeug=True)
+    socketio.run(app, host='0.0.0.0', port=MAIN_PORT, debug=False, allow_unsafe_werkzeug=True)

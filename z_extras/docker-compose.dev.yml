@@ -1,3 +1,15 @@
+# ⚠️  IMPORTANT: Move this file to project root before use!
+# This file must be in the same directory as Dockerfile and docker-compose.yml
+# Usage: mv z_extras/docker-compose.dev.yml ./docker-compose.dev.yml
+#        docker-compose -f docker-compose.dev.yml up --build
+#
+# PORT CONFIGURATION: To change the port, modify ONLY the first number in "8081:8080" below
+# DO NOT change the second number (8080) - it must match the internal Flask port
+# Example: "3000:8080" = access via port 3000, container still uses 8080 internally
+#
+# Raw WebSocket for StreamerBot (Internal only, handled by app.py)
+#   - AUTOMATICALLY set to main port + 1 inside container (if PORT=8080, websocket=8081)
+
 version: '3.8'
 
 services:
@@ -8,9 +20,9 @@ services:
     container_name: obs-tv-animator-dev
     restart: unless-stopped
     labels:
-      - "version=0.8.0-dev"
+      - "version=0.8.5-dev"
     ports:
-      - "8081:8080"
+      - "8081:8080"  # Development port (external:internal port mapping)
     volumes:
       # ===== DEVELOPMENT HOT RELOAD VOLUMES =====
       # Mount ALL source files for live editing
@@ -18,9 +30,9 @@ services:
       - ./templates:/app/templates
       - ./static:/app/static
       
-      # Media directories (read-only for safety)
-      - ./animations:/app/animations:ro
-      - ./videos:/app/videos:ro
+      # Media directories (allow file management operations)
+      - ./animations:/app/animations
+      - ./videos:/app/videos
       
       # Data directory for persistent state
       - ./data:/app/data
@@ -31,7 +43,7 @@ services:
       # ===== DEVELOPMENT ENVIRONMENT =====
       - FLASK_ENV=development
       - FLASK_DEBUG=1
-      - PORT=8080
+      - PORT=8080        # Main port (Raw WebSocket will be PORT+1=8081)
       - PYTHONUNBUFFERED=1
       # Enable hot reload
       - FLASK_RUN_HOST=0.0.0.0

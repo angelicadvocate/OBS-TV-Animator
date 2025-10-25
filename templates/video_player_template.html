@@ -9,6 +9,8 @@
     <link rel="icon" type="image/png" href="../static/assets/OTA_favicon_round.png">
     <link rel="shortcut icon" type="image/png" href="../static/assets/OTA_favicon_round.png">
     
+    <!-- OBS-TV-Animator Integration -->
+    <link rel="stylesheet" href="../static/css/ota-integration.css">
     <link rel="stylesheet" href="../static/css/video_player_template.css">
 </head>
 <body>
@@ -31,9 +33,7 @@
         </div>
     </div>
     
-    <div class="status-indicator disconnected" id="statusIndicator">
-        Connecting...
-    </div>
+    <div class="ota-status-indicator disconnected" id="statusIndicator" title="OTA Connection Status"></div>
     
     <div class="video-info" id="videoInfo">
         Playing: {{ video_filename }}

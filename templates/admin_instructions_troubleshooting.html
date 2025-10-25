@@ -86,6 +86,15 @@
                 </a>
             </div>
 
+            <!-- Success Status -->
+            <div class="success-banner">
+                <i class="fa-solid fa-circle-check"></i>
+                <div>
+                    <h4>Troubleshooting & FAQ Guide</h4>
+                    <p>Comprehensive solutions for common OBS-TV-Animator issues and questions.</p>
+                </div>
+            </div>
+
             <!-- Quick Diagnostics -->
             <div class="card">
                 <h2><i class="fa-solid fa-stethoscope"></i> Quick Diagnostics</h2>
@@ -104,7 +113,7 @@
                         <label>
                             <input type="checkbox" class="diagnostic-checkbox" data-relates-to="docker,server,network">
                             <span class="checkmark"></span>
-                            Admin panel loads at http://[YOUR_IP]:8080/admin
+                            Admin panel loads at http://[YOUR_IP]:[PORT]/admin
                         </label>
                     </div>
                     
@@ -112,7 +121,7 @@
                         <label>
                             <input type="checkbox" class="diagnostic-checkbox" data-relates-to="server,network">
                             <span class="checkmark"></span>
-                            Animation plays in computer browser at http://[YOUR_IP]:8080
+                            Animation plays in computer browser at http://[YOUR_IP]:[PORT]
                         </label>
                     </div>
                     
@@ -202,7 +211,7 @@
                             
                             <p><strong>Common solutions:</strong></p>
                             <ul>
-                                <li>Port 8080 might be in use by another application</li>
+                                <li>Port [PORT] might be in use by another application</li>
                                 <li>Insufficient Docker resources (increase memory/CPU limits)</li>
                                 <li>Corrupted data volume - try removing and recreating</li>
                                 <li>Missing required files in the mounted volume</li>
@@ -211,23 +220,24 @@
                             <p><strong>Reset container:</strong></p>
                             <pre class="code-block">docker-compose down
 docker-compose up -d --force-recreate</pre>
+                            <p class="warning-text"><i class="fa-solid fa-exclamation-triangle"></i> <strong>Important:</strong> Make sure your binds are set properly outside the container in docker-compose.yml or backup the config before running this command.</p>
                         </div>
                     </div>
 
                     <div class="faq-item">
                         <div class="faq-question">
                             <i class="fa-solid fa-question-circle"></i>
-                            <strong>Port 8080 already in use</strong>
+                            <strong>Port [PORT] already in use</strong>
                         </div>
                         <div class="faq-answer">
                             <p><strong>Find what's using the port:</strong></p>
                             <pre class="code-block"># Windows
-netstat -ano | findstr :8080
+netstat -ano | findstr :[PORT]
 
 # macOS/Linux
-lsof -i :8080</pre>
+lsof -i :[PORT]</pre>
                             
-                            <p><strong>Change the port:</strong> Edit docker-compose.yml and change "8080:8080" to "8081:8080", then use port 8081 in your URLs.</p>
+                            <p><strong>Change the port:</strong> Edit docker-compose.yml and change "[PORT]:8080" to "[NEWPORT]:8080", then use port [NEWPORT] in your URLs.</p>
                         </div>
                     </div>
 
@@ -312,7 +322,7 @@ docker exec -it obs-tv-animator cat /app/data/config/users.json</pre>
                             <ol>
                                 <li>Windows Security → Firewall & network protection</li>
                                 <li>Advanced settings → Inbound Rules → New Rule</li>
-                                <li>Port → TCP → 8080 → Allow the connection</li>
+                                <li>Port → TCP → [PORT] → Allow the connection</li>
                             </ol>
                             
                             <p><strong>macOS Firewall:</strong></p>
@@ -409,22 +419,23 @@ docker exec -it obs-tv-animator cat /app/data/config/users.json</pre>
                     <div class="faq-item">
                         <div class="faq-question">
                             <i class="fa-solid fa-question-circle"></i>
-                            <strong>OBS Browser Source not updating</strong>
+                            <strong>Smart TV not displaying animations</strong>
                         </div>
                         <div class="faq-answer">
-                            <p><strong>Browser source settings:</strong></p>
+                            <p><strong>TV connection troubleshooting:</strong></p>
                             <ul>
-                                <li>Enable "Shutdown source when not visible"</li>
-                                <li>Enable "Refresh browser when scene becomes active"</li>
-                                <li>Set appropriate Width/Height (1920x1080)</li>
-                                <li>Try manually refreshing the browser source</li>
+                                <li>Verify TV browser is pointed to correct URL: http://[YOUR_IP]:[PORT]</li>
+                                <li>Check that TV and server are on same network</li>
+                                <li>Test URL accessibility from another device first</li>
+                                <li>Ensure TV browser supports modern HTML5/CSS3</li>
                             </ul>
                             
-                            <p><strong>If still not updating:</strong></p>
+                            <p><strong>If animations still not updating:</strong></p>
                             <ul>
-                                <li>Remove and re-add the browser source</li>
-                                <li>Check if hardware acceleration is causing issues</li>
-                                <li>Verify the URL is correct and accessible</li>
+                                <li>Manually refresh TV browser or restart TV browser app</li>
+                                <li>Check server logs for connection issues</li>
+                                <li>Verify WebSocket connections are established (future OBS integration)</li>
+                                <li>Try accessing from TV's built-in browser vs external browser app</li>
                             </ul>
                         </div>
                     </div>
@@ -596,21 +607,46 @@ docker exec -it obs-tv-animator ls -la /app/videos/</pre>
                         <pre class="code-block">docker-compose down
 docker volume rm obs-tv-animator_data
 docker-compose up -d</pre>
-                        <p class="warning-text">⚠️ This will delete all user accounts, settings, and uploaded files!</p>
+                        <p class="warning-text"><i class="fa-solid fa-exclamation-triangle"></i> This will delete all user accounts, settings, and uploaded files if you did not set up binds in the Docker Compose file!</p>
                     </div>
 
                     <div class="recovery-item">
                         <h4><i class="fa-solid fa-database"></i> Backup Important Data</h4>
-                        <p>Before making major changes, backup your configuration:</p>
-                        <pre class="code-block">docker cp obs-tv-animator:/app/data ./backup-data-$(date +%Y%m%d)</pre>
+                        <p>Before making major changes, backup your configuration and files:</p>
+                        <pre class="code-block"># Backup configuration data
+docker cp obs-tv-animator:/app/data ./backup-data-$(date +%Y%m%d)
+
+# If you also need to backup animations and videos
+docker cp obs-tv-animator:/app/animations ./backup-animations-$(date +%Y%m%d)
+docker cp obs-tv-animator:/app/videos ./backup-videos-$(date +%Y%m%d)</pre>
+                        
+                        <p><strong>Alternative for bind mounts:</strong> If you set up folder binds in docker-compose.yml or Docker Desktop GUI, you can backup by simply copying the bound folders:</p>
+                        <pre class="code-block"># Windows (copy to backup location)
+copy /app/data C:\backup\data-$(Get-Date -Format "yyyyMMdd")
+copy /app/animations C:\backup\animations-$(Get-Date -Format "yyyyMMdd")
+
+# Linux/macOS
+cp -r /path/to/your/data ./backup-data-$(date +%Y%m%d)
+cp -r /path/to/your/animations ./backup-animations-$(date +%Y%m%d)</pre>
                     </div>
 
                     <div class="recovery-item">
                         <h4><i class="fa-solid fa-history"></i> Restore from Backup</h4>
                         <p>To restore from a backup:</p>
-                        <pre class="code-block">docker-compose down
+                        <pre class="code-block"># Stop container first
+docker-compose down
+
+# Restore configuration data
 docker cp ./backup-data-YYYYMMDD/. obs-tv-animator:/app/data/
+
+# Restore animations and videos if backed up
+docker cp ./backup-animations-YYYYMMDD/. obs-tv-animator:/app/animations/
+docker cp ./backup-videos-YYYYMMDD/. obs-tv-animator:/app/videos/
+
+# Start container
 docker-compose up -d</pre>
+                        
+                        <p><strong>For bind mounts:</strong> Simply copy the backup folders back to your bound locations before starting the container.</p>
                     </div>
                 </div>
             </div>

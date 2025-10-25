@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Animation 1 - Bouncing Ball</title>
+    
+    <!-- OBS-TV-Animator Integration -->
+    <link rel="stylesheet" href="/static/css/ota-integration.css">
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+            font-family: Arial, sans-serif;
+        }
+        .animation-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+        .ball {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            border-radius: 50%;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            animation: bounce 2s ease-in-out infinite;
+        }
+        .title {
+            position: absolute;
+            top: 50px;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 2px 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        @keyframes bounce {
+            0%, 100% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-200px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="animation-container">
+        <div class="title">Test Animation 1 - Bouncing Ball</div>
+        <div class="ball" id="mainElement"></div>
+    </div>
+
+    <!-- Include Socket.IO client library -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- OBS-TV-Animator Integration -->
+    <script src="/static/js/ota-integration.js"></script>
+    
+    <script>
+        // Initialize OTA integration with the main animation element
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('Initializing Test Animation 1 with OTA Integration');
+            window.otaIntegration = new OTAIntegration('mainElement');
+        });
+    </script>
+</body>
+</html>

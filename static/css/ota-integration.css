@@ -1,0 +1,64 @@
+/* OBS-TV-Animator Integration Styles */
+
+/* WebSocket status indicator */
+.ota-status-indicator {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    transition: all 0.3s ease;
+    z-index: 9999;
+}
+
+.ota-status-indicator.connected {
+    background: rgba(76, 175, 80, 0.3);
+    border: 2px solid rgba(76, 175, 80, 0.8);
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.4);
+}
+
+.ota-status-indicator.disconnected {
+    background: rgba(244, 67, 54, 0.9);
+    border: 2px solid rgba(244, 67, 54, 1);
+    box-shadow: 0 0 12px rgba(244, 67, 54, 0.6);
+    animation: ota-pulse-error 2s ease-in-out infinite;
+}
+
+@keyframes ota-pulse-error {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.1); }
+}
+
+/* Flash animation for element feedback */
+.ota-flash-animation {
+    animation: ota-flashEffect 1.5s ease-in-out;
+}
+
+@keyframes ota-flashEffect {
+    0% { transform: scale(1) brightness(1); }
+    50% { transform: scale(1.1) brightness(1.5); }
+    100% { transform: scale(1) brightness(1); }
+}
+
+/* Loading notification styles */
+.ota-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.9);
+    color: white;
+    padding: 20px 40px;
+    border-radius: 10px;
+    font-size: 18px;
+    z-index: 10000;
+    text-align: center;
+    font-family: Arial, sans-serif;
+}
+
+.ota-notification .subtitle {
+    font-size: 14px;
+    margin-top: 10px;
+    opacity: 0.8;
+}

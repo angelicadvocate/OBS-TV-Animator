@@ -1,3 +1,16 @@
+# SETUP REQUIRED: Replace "PATH_TO_YOUR" with your actual project directory path
+# Example: 
+#   Windows: C:/Users/YourName/Documents/OBS-TV-Animator
+#   Linux/macOS: /home/yourname/OBS-TV-Animator
+# Or use relative paths: ./animations, ./videos, ./data
+#
+# PORT CONFIGURATION: To change the port, modify ONLY the first number in "8080:8080" below
+# DO NOT change the second number (8080) - it must match the internal Flask port
+# Example: "3000:8080" = access via port 3000, container still uses 8080 internally
+#
+# Raw WebSocket for StreamerBot (Internal only, handled by app.py)
+#   - AUTOMATICALLY set to main port + 1 inside container (if PORT=8080, websocket=8081)
+
 version: '3.8'
 
 services:
@@ -8,18 +21,18 @@ services:
     container_name: obs-tv-animator
     restart: unless-stopped
     labels:
-      - "version=0.8.0"
+      - "version=0.8.6"
     ports:
-      - "8080:8080"
+      - "8080:8080"  # Main application (external:internal port mapping)
     volumes:
-      # Mount media directories to allow adding content without rebuilding
-      - ./animations:/app/animations:ro
-      - ./videos:/app/videos:ro
+      # Mount media directories to allow adding/deleting content without rebuilding
+      - PATH_TO_YOUR/animations:/app/animations
+      - PATH_TO_YOUR/videos:/app/videos
       # Mount data directory for persistent state, config, and logs
-      - ./data:/app/data
+      - PATH_TO_YOUR/data:/app/data
     environment:
       - FLASK_ENV=production
-      - PORT=8080
+      - PORT=8080        # Main port (Raw WebSocket will be PORT+1=8081)
       - PYTHONUNBUFFERED=1
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]

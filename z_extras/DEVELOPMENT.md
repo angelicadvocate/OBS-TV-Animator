@@ -8,11 +8,8 @@ This project offers **three different development approaches** depending on your
 **Perfect for:** HTML, CSS, JS changes with instant hot reload
 
 ```bash
-# Windows
-dev-local.bat
-
-# macOS/Linux  
-python dev_local.py
+# All platforms (run from project root)
+python z_extras/dev_local.py
 ```
 
 **Benefits:**
@@ -29,13 +26,10 @@ python dev_local.py
 **Perfect for:** Testing Docker setup while developing
 
 ```bash
-# Windows
-dev-server.bat
+# First move dev compose file to root (only needed once)
+mv z_extras/docker-compose.dev.yml ./docker-compose.dev.yml
 
-# macOS/Linux
-./dev-server.sh
-
-# Or manually
+# Then run development container
 docker-compose -f docker-compose.dev.yml up --build
 ```
 
@@ -53,10 +47,7 @@ docker-compose -f docker-compose.dev.yml up --build
 **Perfect for:** Final testing and deployment
 
 ```bash
-# Windows
-prod-server.bat
-
-# Or manually
+# All platforms
 docker-compose up -d --build
 ```
 
@@ -74,7 +65,7 @@ docker-compose up -d --build
 
 ### Frontend Development (HTML/CSS/JS)
 1. **Use LOCAL development** for fastest feedback
-2. Run `dev-local.bat` (Windows) or `python dev_local.py` 
+2. Run `python z_extras/dev_local.py` from project root
 3. Edit files in `templates/`, `static/css/`, `static/js/`
 4. Refresh browser to see changes instantly
 
@@ -86,13 +77,14 @@ docker-compose up -d --build
 
 ### Full Stack Testing
 1. **Use Docker development** to test integration
-2. Run `dev-server.bat` to start containerized version
-3. Test both frontend and backend changes
-4. Verify everything works in containerized environment
+2. Move `z_extras/docker-compose.dev.yml` to root if not already done
+3. Run `docker-compose -f docker-compose.dev.yml up --build` to start containerized version
+4. Test both frontend and backend changes
+5. Verify everything works in containerized environment
 
 ### Production Validation
 1. **Use Production setup** for final testing
-2. Run `prod-server.bat` to test production config
+2. Run `docker-compose up -d --build` to test production config
 3. Verify performance and stability
 4. Test with actual Smart TV devices
 
@@ -137,9 +129,11 @@ docker-compose up -d --build
 ## 🔧 Troubleshooting
 
 ### Port Conflicts
-- **LOCAL:** Uses port 5000 (Flask default)
-- **Docker Dev:** Uses port 8081 
-- **Production:** Uses port 8080
+- **LOCAL:** Uses port 5000 (Flask default) + 5001 (Raw WebSocket)
+- **Docker Dev:** Uses port 8081 (external) → 8080 (internal) + 8081 (Raw WebSocket) 
+- **Production:** Uses port 8080 (main) + 8081 (Raw WebSocket)
+
+**Note:** Each setup uses 2 ports - main port and main port + 1 for raw WebSocket connections
 
 ### Volume Mount Issues (Docker)
 ```bash
@@ -156,8 +150,8 @@ pip install -r requirements.txt
 
 ### File Permissions (macOS/Linux)
 ```bash
-# Make scripts executable:
-chmod +x dev-server.sh dev_local.py
+# Make dev_local.py executable if needed:
+chmod +x z_extras/dev_local.py
 ```
 
 ---

@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>BRB Screen</title>
+<!-- Google Font -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=BBH+Sans+Bogle&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500&display=swap" rel="stylesheet">
+
+<!-- OBS-TV-Animator Integration -->
+<link rel="stylesheet" href="/static/css/ota-integration.css">
+
+<style>
+  body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    background: linear-gradient(-45deg, #1a1a1a, #2d1b69, #11998e, #38ef7d);
+    background-size: 400% 400%;
+    animation: gradientShift 15s ease infinite;
+    color: #fff;
+    font-family: Arial, sans-serif;
+    text-align: center;
+  }
+#message {
+  font-size: 6vw;
+  margin-bottom: 40px;
+  font-family: 'BBH Sans Bogle', sans-serif;
+  font-weight: 400;
+  transition: opacity 0.8s ease-in-out;
+  animation: fadeIn 1s ease-in-out, 
+             breathing 3s ease-in-out infinite, 
+             colorShift 5s infinite alternate;
+  text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.7), 
+               0 0 20px rgba(255, 255, 255, 0.6),
+               0 0 40px rgba(255, 255, 255, 0.4),
+               0 0 60px rgba(255, 255, 255, 0.2),
+               0 0 80px rgba(168, 255, 235, 0.3);
+}
+
+  #timer
+    {
+        font-size: 5vw;
+        margin: 10px 0;
+        font-family: 'Poppins', sans-serif;
+        text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8), 0 0 15px rgba(255, 255, 255, 0.2);
+    }
+  
+  #time {
+    font-size: 2.5vw;
+    margin: 5px 0;
+    font-family: 'Poppins', sans-serif;
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.8), 0 0 10px rgba(255, 255, 255, 0.2);
+  }
+
+  /* Simple fade animation for messages */
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Breathing effect - gentle scale animation */
+  @keyframes breathing {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+  /* Color shift animation */
+  @keyframes colorShift {
+  0% { color: #ffffff; }
+  50% { color: #a8ffeb; }
+  100% { color: #ffffff; }
+  }
+
+  /* Animated gradient background */
+  @keyframes gradientShift {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+</style>
+</head>
+<body>
+
+<div id="message"></div>
+<div id="timer">BRB Time: 0m 0s</div>
+<div id="time">Current Time: --:--:--</div>
+
+<script>
+  const messages = [
+    "Go take a break - you've earned it!",
+    "Even legends need bathroom breaks.",
+    "Hydrate, stretch, breathe!<br>The stream will wait.",
+    "Don't worry!<br>Chat's just debating pineapple pizza again.",
+    "Take five. You’re crushing it today!"
+  ];
+
+  let messageIndex = 0;
+  const messageElement = document.getElementById("message");
+  const timerElement = document.getElementById("timer");
+  const timeElement = document.getElementById("time");
+
+  let startTime = Date.now();
+
+  // Update message every 10 seconds with fade effect
+  function updateMessage() {
+    messageElement.style.opacity = 0;
+    setTimeout(() => {
+      messageElement.innerHTML = messages[messageIndex];
+      messageIndex = (messageIndex + 1) % messages.length;
+      messageElement.style.opacity = 1;
+    }, 800); // fade out/in transition - matches CSS transition
+  }
+  updateMessage();
+  setInterval(updateMessage, 10000);
+
+  // Update timer and current time every second
+  setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const minutes = Math.floor(elapsed / 60000);
+    const seconds = Math.floor((elapsed % 60000) / 1000);
+    timerElement.innerText = `BRB Time: ${minutes}m ${seconds}s`;
+
+    const now = new Date();
+    // Get timezone abbreviation (e.g., CST, EST, PST, etc.)
+    const timeZone = now.toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
+    timeElement.innerText = `${timeZone}: ${now.toLocaleTimeString()}`;
+  }, 1000);
+</script>
+
+<!-- Include Socket.IO client library -->
+<script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+
+<!-- OBS-TV-Animator Integration -->
+<script src="/static/js/ota-integration.js"></script>
+
+<script>
+  // Initialize OTA integration with the main message element for flash effects
+  document.addEventListener('DOMContentLoaded', () => {
+    console.log('Initializing BRB Screen with OTA Integration');
+    window.otaIntegration = new OTAIntegration('message');
+  });
+</script>
+
+</body>
+</html>

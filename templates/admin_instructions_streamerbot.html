@@ -139,10 +139,18 @@
                 </div>
             </div>
 
-            <!-- Action Creation -->
+            <!-- Action Creation - New C# Method -->
             <div class="card">
                 <h2><i class="fa-solid fa-plus-circle"></i> Creating StreamerBot Actions</h2>
-                <p>StreamerBot uses "Actions" to respond to events. Each action can trigger an animation on your Smart TV.</p>
+                <p>StreamerBot uses "Actions" to respond to events. The recommended method uses C# Execute Code for direct WebSocket communication.</p>
+                
+                <div class="success-banner">
+                    <i class="fa-solid fa-info-circle"></i>
+                    <div>
+                        <h4>New Recommended Method!</h4>
+                        <p>The C# WebSocket method provides better performance, reliability, and error handling compared to HTTP requests. Use the <a href="/admin/manage" class="inline-link">Manage Files</a> page to copy ready-to-use C# code for each animation.</p>
+                    </div>
+                </div>
                 
                 <div class="setup-steps">
                     <div class="step">
@@ -155,6 +163,7 @@
                                 <li>Right-click in the Actions list</li>
                                 <li>Select <strong>"Add Action"</strong></li>
                                 <li>Name it (e.g., "TV Animation - Follow")</li>
+                                <li>Click <strong>OK</strong></li>
                             </ol>
                         </div>
                     </div>
@@ -162,41 +171,127 @@
                     <div class="step">
                         <span class="step-number">2</span>
                         <div class="step-content">
-                            <h4>Add Fetch URL Sub-Action</h4>
+                            <h4>Define a Trigger</h4>
                             <ol>
-                                <li>In your new action, right-click in the <strong>Sub-Actions</strong> area</li>
-                                <li>Navigate: <strong>Add → Core → Network → Fetch URL</strong></li>
-                                <li>Configure the Fetch URL action:</li>
+                                <li>In your new action, right-click in the <strong>Triggers</strong> box</li>
+                                <li>Select <strong>Add</strong></li>
+                                <li>Choose the trigger you would like (e.g., <strong>Twitch → Raid</strong>, <strong>Twitch → Follow</strong>, etc.)</li>
+                                <li>Configure any trigger-specific variables or settings</li>
+                                <li>Click <strong>OK</strong></li>
                             </ol>
-                            <div class="config-box">
-                                <strong>Fetch URL Configuration:</strong><br>
-                                <strong>URL:</strong> <code>http://localhost:5000/trigger?animation=anim1.html</code><br>
-                                <strong>Variable Name:</strong> <code>triggerResponse</code> (can be any name)<br>
-                                <strong>Method:</strong> GET (default)<br><br>
-                                <strong>💡 Pro Tip:</strong> The variable name doesn't affect functionality, it's just for storing the response.
-                            </div>
-                            
-                            <div class="alert alert-info">
-                                <i class="fa-solid fa-lightbulb"></i>
-                                <strong>Why this works:</strong> StreamerBot's Fetch URL action makes a simple GET request to your OBS-TV-Animator server. 
-                                The animation parameter in the URL tells the server which animation to display.
-                            </div>
                         </div>
                     </div>
 
                     <div class="step">
                         <span class="step-number">3</span>
                         <div class="step-content">
-                            <h4>Assign Trigger</h4>
+                            <h4>Add Execute C# Code Sub-Action</h4>
                             <ol>
-                                <li>Right-click your action</li>
-                                <li>Select <strong>"Add Trigger"</strong></li>
-                                <li>Choose event type (e.g., <strong>Platforms → Twitch → Follow</strong>)</li>
-                                <li>Configure any additional settings</li>
+                                <li>In your new action, right-click in the <strong>Sub-Actions</strong> area</li>
+                                <li>Navigate: <strong>Add → Core → C# → Execute C# Code</strong></li>
+                                <li>Copy the C# code from the <a href="/admin/manage" class="inline-link">Manage Files</a> page</li>
+                                <li>Paste it into the C# code editor</li>
+                                <li>Click <strong>Compile & Save</strong></li>
                             </ol>
+                            
+                            <div class="config-box">
+                                <strong>Example C# Code:</strong><br>
+                                <pre><code>using System;
+public class CPHInline
+{
+    public bool Execute()
+    {
+        string json = "{\"action\":\"trigger_animation\",\"animation\":\"anim1.html\"}";
+        CPH.WebsocketSend(json, 0);
+        return true;
+    }
+}</code></pre>
+                                <strong><i class="fa-solid fa-lightbulb"></i> Pro Tip:</strong> Use the "StreamerBot C#" button next to each animation in <a href="/admin/manage" class="inline-link">Manage Files</a> for file-specific code.
+                            </div>
+                            
+                            <div class="alert alert-info">
+                                <i class="fa-solid fa-lightbulb"></i>
+                                <strong>Why this works:</strong> StreamerBot's Execute C# Code action uses <code>CPH.WebsocketSend()</code> to communicate directly with OBS-TV-Animator via WebSocket. This provides instant triggering, better error handling, and bidirectional communication.
+                            </div>
                         </div>
                     </div>
+
                 </div>
+            </div>
+
+            <!-- Legacy HTTP Method -->
+            <div class="card">
+                <h2><i class="fa-solid fa-plus-circle"></i> Creating StreamerBot Actions (Legacy)</h2>
+                <p>This method uses HTTP requests instead of WebSocket communication. While still functional, the C# method above is recommended for better performance.</p>
+                
+                <details>
+                    <summary class="collapsible-header">
+                        <i class="fa-solid fa-chevron-right"></i>
+                        Show Legacy HTTP Method Instructions
+                    </summary>
+                    <div class="collapsible-content">
+                        <div class="alert alert-info">
+                            <i class="fa-solid fa-lightbulb"></i>
+                            <strong>Quick Setup:</strong> Use the <a href="/admin/manage" class="inline-link">Manage Files</a> page to copy ready-to-use HTTP URLs for each animation with the "StreamerBot HTTP" button.
+                        </div>
+                        <div class="setup-steps">
+                            <div class="step">
+                                <span class="step-number">1</span>
+                                <div class="step-content">
+                                    <h4>Create New Action</h4>
+                                    <ol>
+                                        <li>Open StreamerBot</li>
+                                        <li>Go to <strong>Actions</strong> tab</li>
+                                        <li>Right-click in the Actions list</li>
+                                        <li>Select <strong>"Add Action"</strong></li>
+                                        <li>Name it (e.g., "TV Animation - Follow")</li>
+                                        <li>Click <strong>OK</strong></li>
+                                    </ol>
+                                </div>
+                            </div>
+
+                            <div class="step">
+                                <span class="step-number">2</span>
+                                <div class="step-content">
+                                    <h4>Define a Trigger</h4>
+                                    <ol>
+                                        <li>In your new action, right-click in the <strong>Triggers</strong> box</li>
+                                        <li>Select <strong>Add</strong></li>
+                                        <li>Choose the trigger you would like (e.g., <strong>Twitch → Raid</strong>, <strong>Twitch → Follow</strong>, etc.)</li>
+                                        <li>Configure any trigger-specific variables or settings</li>
+                                        <li>Click <strong>OK</strong></li>
+                                    </ol>
+                                </div>
+                            </div>
+
+                            <div class="step">
+                                <span class="step-number">3</span>
+                                <div class="step-content">
+                                    <h4>Add Fetch URL Sub-Action</h4>
+                                    <ol>
+                                        <li>In your new action, right-click in the <strong>Sub-Actions</strong> area</li>
+                                        <li>Navigate: <strong>Add → Core → Network → Fetch URL</strong></li>
+                                        <li>Configure the Fetch URL action:</li>
+                                    </ol>
+                                    <div class="config-box">
+                                        <strong>Fetch URL Configuration:</strong><br>
+                                        <strong>URL:</strong> <code>http://localhost:[PORT]/trigger?animation=anim1.html</code><br>
+                                        <strong>Variable Name:</strong> <code>triggerResponse</code> (can be any name)<br>
+                                        <strong>Method:</strong> GET (default)<br><br>
+                                        <strong><i class="fa-solid fa-lightbulb"></i> Pro Tip:</strong> The variable name doesn't affect functionality, it's just for storing the response.
+                                    </div>
+                                    
+                                    <div class="alert alert-info">
+                                        <i class="fa-solid fa-lightbulb"></i>
+                                        <strong>Why this works:</strong> StreamerBot's Fetch URL action makes a simple GET request to your OBS-TV-Animator server. 
+                                        The animation parameter in the URL tells the server which animation to display.
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </details>
             </div>
 
             <!-- Common Event Examples -->
@@ -209,125 +304,37 @@
                         <h4><i class="fa-solid fa-heart"></i> New Follow</h4>
                         <p><strong>Trigger:</strong> Platforms → Twitch → Follow</p>
                         <p><strong>Suggested Animation:</strong> anim1.html (celebration)</p>
-                        <div class="code-example">
-                            <strong>Fetch URL:</strong><br>
-                            <code>http://localhost:5000/trigger?animation=anim1.html</code>
-                        </div>
                     </div>
 
                     <div class="event-card">
                         <h4><i class="fa-solid fa-gift"></i> Donation/Tip</h4>
                         <p><strong>Trigger:</strong> Platforms → StreamLabs → Donation</p>
                         <p><strong>Suggested Animation:</strong> anim2.html (flashy celebration)</p>
-                        <div class="code-example">
-                            <strong>Fetch URL:</strong><br>
-                            <code>http://localhost:5000/trigger?animation=anim2.html</code>
-                        </div>
                     </div>
 
                     <div class="event-card">
                         <h4><i class="fa-solid fa-users"></i> Raid Received</h4>
                         <p><strong>Trigger:</strong> Platforms → Twitch → Raid</p>
                         <p><strong>Suggested Animation:</strong> anim3.html (epic entrance)</p>
-                        <div class="code-example">
-                            <strong>Fetch URL:</strong><br>
-                            <code>http://localhost:5000/trigger?animation=anim3.html</code>
-                        </div>
                     </div>
 
                     <div class="event-card">
                         <h4><i class="fa-solid fa-crown"></i> New Subscriber</h4>
                         <p><strong>Trigger:</strong> Platforms → Twitch → Subscribe</p>
                         <p><strong>Suggested Animation:</strong> anim4.html (premium celebration)</p>
-                        <div class="code-example">
-                            <strong>Fetch URL:</strong><br>
-                            <code>http://localhost:5000/trigger?animation=anim4.html</code>
-                        </div>
                     </div>
 
                     <div class="event-card">
                         <h4><i class="fa-solid fa-comment"></i> Chat Command</h4>
                         <p><strong>Trigger:</strong> Commands → Custom Command (!tv, !animate)</p>
                         <p><strong>Suggested Animation:</strong> User-specified or random</p>
-                        <div class="code-example">
-<pre>{
-    "animation": "%input%",
-    "source": "chat_command",
-    "user": "%user%"
-}</pre>
-                        </div>
                     </div>
 
                     <div class="event-card">
                         <h4><i class="fa-solid fa-pause"></i> Stream Break</h4>
-                        <p><strong>Trigger:</strong> Manual trigger or timer</p>
-                        <p><strong>Animation:</strong> brb.html (be right back)</p>
-                        <div class="code-example">
-                            <strong>Fetch URL:</strong><br>
-                            <code>http://localhost:5000/trigger?animation=brb.html</code>
-                        </div>
+                        <p><strong>Trigger:</strong> Manual trigger, timer, chat command, or scene change.</p>
+                        <p><strong>Suggested Animation:</strong> brb.html (be right back)</p>
                     </div>
-                </div>
-            </div>
-
-            <!-- Quick Reference -->
-            <div class="card">
-                <h2><i class="fa-solid fa-rocket"></i> Quick Reference - All Animation URLs</h2>
-                <p>Copy these URLs directly into StreamerBot's Fetch URL action:</p>
-                
-                <div class="quick-reference">
-                    <div class="url-card">
-                        <h4>🎉 Animation 1 (Celebration)</h4>
-                        <code class="url-code">http://localhost:5000/trigger?animation=anim1.html</code>
-                        <button class="copy-btn" onclick="copyToClipboard('http://localhost:5000/trigger?animation=anim1.html')">
-                            <i class="fa-solid fa-copy"></i> Copy
-                        </button>
-                    </div>
-                    
-                    <div class="url-card">
-                        <h4>✨ Animation 2 (Flashy)</h4>
-                        <code class="url-code">http://localhost:5000/trigger?animation=anim2.html</code>
-                        <button class="copy-btn" onclick="copyToClipboard('http://localhost:5000/trigger?animation=anim2.html')">
-                            <i class="fa-solid fa-copy"></i> Copy
-                        </button>
-                    </div>
-                    
-                    <div class="url-card">
-                        <h4>🚀 Animation 3 (Epic)</h4>
-                        <code class="url-code">http://localhost:5000/trigger?animation=anim3.html</code>
-                        <button class="copy-btn" onclick="copyToClipboard('http://localhost:5000/trigger?animation=anim3.html')">
-                            <i class="fa-solid fa-copy"></i> Copy
-                        </button>
-                    </div>
-                    
-                    <div class="url-card">
-                        <h4>👑 Animation 4 (Premium)</h4>
-                        <code class="url-code">http://localhost:5000/trigger?animation=anim4.html</code>
-                        <button class="copy-btn" onclick="copyToClipboard('http://localhost:5000/trigger?animation=anim4.html')">
-                            <i class="fa-solid fa-copy"></i> Copy
-                        </button>
-                    </div>
-                    
-                    <div class="url-card">
-                        <h4>⏸️ Be Right Back</h4>
-                        <code class="url-code">http://localhost:5000/trigger?animation=brb.html</code>
-                        <button class="copy-btn" onclick="copyToClipboard('http://localhost:5000/trigger?animation=brb.html')">
-                            <i class="fa-solid fa-copy"></i> Copy
-                        </button>
-                    </div>
-                </div>
-                
-                <div class="alert alert-info">
-                    <i class="fa-solid fa-info-circle"></i>
-                    <strong>Setup Steps:</strong>
-                    <ol>
-                        <li>Create Action in StreamerBot</li>
-                        <li>Add Sub-Action: <strong>Add → Core → Network → Fetch URL</strong></li>
-                        <li>Paste one of the URLs above</li>
-                        <li>Set Variable Name: <code>animationTrigger</code></li>
-                        <li>Add your trigger (Follow, Donation, etc.)</li>
-                        <li>Test and enjoy! 🎊</li>
-                    </ol>
                 </div>
             </div>
 
@@ -337,55 +344,65 @@
                 
                 <div class="setup-steps">
                     <div class="step">
-                        <span class="step-number">💡</span>
+                        <span class="step-number"><i class="fa-solid fa-lightbulb"></i></span>
                         <div class="step-content">
-                            <h4>Dynamic Animation Selection</h4>
-                            <p>Use StreamerBot variables to choose animations dynamically:</p>
-                            <pre class="code-block">{
-    "animation": "%randomAnimation%",
-    "source": "random_event"
-}</pre>
-                            <p>Create a variable <code>%randomAnimation%</code> that picks from your available animations.</p>
+                            <h4>Random Animation Selection</h4>
+                            <p>Create actions that randomly pick from your available animations:</p>
+                            <ol>
+                                <li>Create a new action: Right-click in <strong>Actions</strong> → <strong>Add</strong> → Give it a name like "Random Animation"</li>
+                                <li>Add trigger: Right-click in <strong>Triggers</strong> → Select your event (Follow, Donation, etc.)</li>
+                                <li>Add sub-action: Right-click <strong>Sub-Actions</strong> → <strong>Core</strong> → <strong>Execute Code (C#)</strong></li>
+                                <li>Use the C# code from <a href="/admin/manage" class="inline-link">Manage Files</a>, but modify the animation name to use StreamerBot's random selection</li>
+                            </ol>
+                            <p><strong><i class="fa-solid fa-lightbulb"></i> Pro Tip:</strong> Use StreamerBot's built-in random functions or create multiple actions with different animations and use random sub-action execution.</p>
                         </div>
                     </div>
 
                     <div class="step">
-                        <span class="step-number">🎯</span>
+                        <span class="step-number"><i class="fa-solid fa-bullseye"></i></span>
                         <div class="step-content">
-                            <h4>Conditional Animations</h4>
-                            <p>Use StreamerBot's IF conditions to trigger different animations based on:</p>
+                            <h4>Conditional Animations Based on Event Data</h4>
+                            <p>Scale animation intensity based on donation amounts, subscriber months, etc.:</p>
+                            <ol>
+                                <li>Create separate actions for different thresholds (e.g., "Small Donation", "Big Donation")</li>
+                                <li>Set up conditional logic using StreamerBot's <strong>If/Else</strong> sub-actions</li>
+                                <li>Use variables like <code>%donationAmount%</code>, <code>%subMonths%</code>, or <code>%viewerCount%</code></li>
+                                <li>Route to different animation sub-actions based on the conditions</li>
+                            </ol>
+                            <p><strong>Example Setup:</strong> If donation ≥ $100 → anim4.html, if ≥ $10 → anim2.html, else → anim1.html</p>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-clock"></i></span>
+                        <div class="step-content">
+                            <h4>Timed Events & Automation</h4>
+                            <p>Set up automatic animations using StreamerBot's built-in scheduling:</p>
                             <ul>
-                                <li>Donation amount thresholds</li>
-                                <li>Number of months subscribed</li>
-                                <li>Time of day</li>
-                                <li>Current game being played</li>
+                                <li><strong>Hourly reminders:</strong> Use <strong>Timed Actions</strong> to trigger follow/subscribe animations</li>
+                                <li><strong>Break timers:</strong> Create actions triggered by scene changes to auto-show BRB screen</li>
+                                <li><strong>Stream milestones:</strong> Use viewer count triggers for celebration animations</li>
+                                <li><strong>Game changes:</strong> React to OBS scene or game detection events</li>
                             </ul>
+                            <p><strong>Setup:</strong> Go to <strong>Actions</strong> → <strong>Timed Actions</strong> to create recurring triggers, or use <strong>Events</strong> → <strong>OBS</strong> for scene-based automation.</p>
                         </div>
                     </div>
 
                     <div class="step">
-                        <span class="step-number">⏰</span>
+                        <span class="step-number"><i class="fa-solid fa-gamepad"></i></span>
                         <div class="step-content">
-                            <h4>Timed Events</h4>
-                            <p>Set up automatic animations:</p>
+                            <h4>Advanced Animation Control</h4>
+                            <p>Fine-tune your animation behavior with optional parameters:</p>
                             <ul>
-                                <li><strong>Hourly reminders:</strong> Show follow/subscribe animations</li>
-                                <li><strong>Break timers:</strong> Auto-trigger BRB screen</li>
-                                <li><strong>Stream milestones:</strong> Special animations at viewer counts</li>
+                                <li><strong>Instant triggering:</strong> Add <code>"instant": true</code> to your JSON for immediate response</li>
+                                <li><strong>Force refresh:</strong> Use <code>"force_refresh": true</code> to ensure TV display updates</li>
+                                <li><strong>Source tracking:</strong> Add <code>"source": "custom_name"</code> to identify different trigger types</li>
                             </ul>
-                        </div>
-                    </div>
-
-                    <div class="step">
-                        <span class="step-number">🎮</span>
-                        <div class="step-content">
-                            <h4>Game-Specific Animations</h4>
-                            <p>Change animations based on the game you're playing:</p>
-                            <pre class="code-block">{
-    "animation": "%gameSpecificAnimation%",
-    "source": "game_change",
-    "game": "%game%"
-}</pre>
+                            <p><strong>How to use:</strong> When copying C# code from <a href="/admin/manage" class="inline-link">Manage Files</a>, you can modify the JSON string to include these parameters for enhanced control.</p>
+                            
+                            <div class="config-box">
+                                <strong>Quick Reference:</strong> All animations include copy buttons for both basic and HTTP integration. Use the <strong>StreamerBot C#</strong> button for instant, copy-paste setup.
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -472,44 +489,67 @@
                             <li>Check if there are permission or cooldown restrictions</li>
                         </ul>
                     </div>
+
+                    <div class="trouble-item">
+                        <h4><i class="fa-solid fa-code"></i> C# Execution Failures</h4>
+                        <p>When C# Execute Code sub-actions fail to trigger animations:</p>
+                        <ul>
+                            <li><strong>Check StreamerBot logs:</strong> Go to <strong>Logs</strong> tab in StreamerBot for C# compilation or runtime errors</li>
+                            <li><strong>Verify WebSocket connection:</strong> Look for connection establishment messages in StreamerBot logs</li>
+                            <li><strong>Check Docker/OBS-TV-Animator logs:</strong> View container logs to confirm WebSocket handshake completion</li>
+                            <li><strong>Test JSON syntax:</strong> Ensure the JSON string in your C# code is properly formatted (no missing quotes or commas)</li>
+                            <li><strong>Confirm network connectivity:</strong> Make sure StreamerBot can reach your Docker container (same network, correct port)</li>
+                            <li><strong>Debug step-by-step:</strong> Add <code>CPH.LogInfo("Debug message");</code> to your C# code to track execution flow</li>
+                        </ul>
+                        <div class="config-box">
+                            <strong><i class="fa-solid fa-lightbulb"></i> Quick Test:</strong> Try the basic HTTP method first - if it works but C# doesn't, the issue is likely in your C# code or StreamerBot's WebSocket setup.
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Example StreamerBot Import -->
+            <!-- Complete C# Template -->
             <div class="card">
-                <h2><i class="fa-solid fa-file-import"></i> Ready-to-Use StreamerBot Actions</h2>
-                <p>Here's a complete StreamerBot action you can import:</p>
+                <h2><i class="fa-solid fa-file-code"></i> Complete C# Code Template</h2>
+                <p>Here's a comprehensive C# template showing all available parameters and structure:</p>
                 
                 <div class="import-section">
                     <div class="code-block-wrapper">
-                        <button class="copy-button" onclick="copyToClipboard('streamerbot-import')">
-                            <i class="fa-solid fa-copy"></i> Copy Import Code
+                        <button class="copy-button" onclick="copyToClipboard('csharp-template')">
+                            <i class="fa-solid fa-copy"></i> Copy C# Template
                         </button>
-                        <pre id="streamerbot-import" class="code-block">{
-  "actions": {
-    "TV Animation - Follow": {
-      "id": "tv-follow-001",
-      "name": "TV Animation - Follow",
-      "triggers": [
-        {
-          "type": "TwitchFollow",
-          "enabled": true
-        }
-      ],
-      "subActions": [
-        {
-          "type": "FetchURL",
-          "url": "http://localhost:5000/trigger?animation=anim1.html",
-          "method": "GET",
-          "variableName": "animationTrigger"
-        }
-      ]
+                        <pre id="csharp-template" class="code-block">{% raw %}using System;
+public class CPHInline
+{
+    public bool Execute()
+    {
+        // Animation file to trigger (change this to your desired animation)
+        string animationFile = "anim1.html";
+        
+        // Complete JSON with all available parameters
+        string json = $@"{{
+            ""action"": ""trigger_animation"",
+            ""animation"": ""{animationFile}"",
+            ""instant"": true,
+            ""force_refresh"": true,
+            ""source"": ""streamerbot_websocket""
+        }}";
+        
+        // Send WebSocket message to OBS-TV-Animator
+        // Note: Change "0" to match your WebSocket connection index if you have multiple WebSocket servers
+        CPH.WebsocketSend(json, 0);
+        
+        // Optional: Log success message
+        CPH.LogInfo($"Triggered animation: {animationFile}");
+        
+        return true;
     }
-  }
-}</pre>
+}{% endraw %}</pre>
                     </div>
-                    <p><strong>To import:</strong> Copy this code → StreamerBot → Actions → Right-click → Import Actions → Paste</p>
-                    <p><strong>Remember:</strong> Change <code>[YOUR_IP]</code> to your actual server IP address!</p>
+                    <p><strong>Usage:</strong> Copy this template into StreamerBot's Execute Code (C#) sub-action</p>
+                    <p><strong>Customize:</strong> Change <code>animationFile</code> and <code>source</code> values as needed. Remove parameters you don't need.</p>
+                    <p><strong>WebSocket Index:</strong> If you have multiple WebSocket servers in StreamerBot, change the <code>0</code> in <code>CPH.WebsocketSend(json, 0)</code> to match your OBS-TV-Animator connection index.</p>
+                    <p><strong><i class="fa-solid fa-lightbulb"></i> Tip:</strong> Use the copy buttons in <a href="/admin/manage" class="inline-link">Manage Files</a> for specific animations instead of manually editing this template.</p>
                 </div>
             </div>
 
@@ -538,32 +578,49 @@
                 </div>
             </div>
             <!-- Success Summary -->
-            <div class="card success-summary">
-                <h2><i class="fa-solid fa-trophy"></i> You're All Set!</h2>
-                <p>🎉 Congratulations! You now have StreamerBot connected to your Smart TV animations.</p>
-                
-                <div class="success-checklist">
-                    <h4>✅ What You've Accomplished:</h4>
-                    <ul>
-                        <li>✅ StreamerBot is configured with Fetch URL actions</li>
-                        <li>✅ Your Smart TV can display animations on command</li>
-                        <li>✅ Stream events will trigger awesome visual effects</li>
-                        <li>✅ Your viewers will have an enhanced experience</li>
-                    </ul>
+            <div class="card">
+                <div class="success-banner">
+                    <i class="fa-solid fa-trophy"></i>
+                    <div>
+                        <h4>You're All Set!</h4>
+                        <p>Congratulations! You now have StreamerBot connected to your Smart TV animations. Stream events will trigger awesome visual effects, and your viewers will have an enhanced experience.</p>
+                    </div>
                 </div>
                 
-                <div class="next-steps">
-                    <h4>🚀 Next Steps:</h4>
-                    <ul>
-                        <li><strong>Test Everything:</strong> Trigger some test events to make sure animations work</li>
-                        <li><strong>Customize Triggers:</strong> Add more event types (raids, donations, etc.)</li>
-                        <li><strong>Create More Animations:</strong> Add custom HTML/CSS animations to the animations folder</li>
-                        <li><strong>Show Off:</strong> Let your viewers know about the new interactive TV experience!</li>
-                    </ul>
-                </div>
-                
-                <div class="help-reminder">
-                    <p><strong>Need Help?</strong> Check the <a href="/admin/instructions/troubleshooting">Troubleshooting Guide</a> or visit our community.</p>
+                <div class="setup-steps">
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-check-circle"></i></span>
+                        <div class="step-content">
+                            <h4>What You've Accomplished</h4>
+                            <ul>
+                                <li>StreamerBot is configured with WebSocket/HTTP actions</li>
+                                <li>Your Smart TV can display animations on command</li>
+                                <li>Stream events will trigger awesome visual effects</li>
+                                <li>Your viewers will have an enhanced experience</li>
+                            </ul>
+                        </div>
+                    </div>
+
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-arrow-right"></i></span>
+                        <div class="step-content">
+                            <h4>Next Steps</h4>
+                            <ul>
+                                <li><strong>Test Everything:</strong> Trigger some test events to make sure animations work</li>
+                                <li><strong>Customize Triggers:</strong> Add more event types (raids, donations, etc.)</li>
+                                <li><strong>Create More Animations:</strong> Add custom HTML/CSS animations via <a href="/admin/manage" class="inline-link">Manage Files</a></li>
+                                <li><strong>Show Off:</strong> Let your viewers know about the new interactive TV experience!</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="step">
+                        <span class="step-number"><i class="fa-solid fa-question-circle"></i></span>
+                        <div class="step-content">
+                            <h4>Need Help?</h4>
+                            <p>Check the <a href="/admin/instructions/troubleshooting" class="inline-link">Troubleshooting Guide</a> or visit our community for support and tips.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
