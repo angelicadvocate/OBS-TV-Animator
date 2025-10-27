@@ -1,0 +1,1219 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OBS-TV-Animator - OBS Management</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../static/assets/OTA_favicon_round.png">
+    <link rel="shortcut icon" type="image/png" href="../static/assets/OTA_favicon_round.png">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../static/css/global.css">
+    
+    <style>
+        /* Page-specific styles for OBS Management */
+        
+        .card {
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .connection-form {
+            display: grid;
+            gap: 15px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 15px;
+        }
+        
+        .form-row-with-toggle {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: start;
+        }
+        
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        
+        .toggle-section {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            align-items: flex-end;
+            text-align: right;
+        }
+        
+        .form-group label {
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+        
+        .form-group input {
+            padding: 10px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--background-primary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.2);
+        }
+        
+        .connection-actions-with-toggle {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 20px;
+            align-items: start;
+        }
+        
+        .connection-actions {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        
+        .connection-actions .btn-primary {
+            padding: 12px 24px;
+            font-size: 16px;
+            font-weight: 600;
+        }
+        
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 15px;
+            border-radius: 20px;
+            font-size: 14px;
+            font-weight: 600;
+        }
+        
+        .status-connected {
+            background: rgba(76, 175, 80, 0.2);
+            color: #4caf50;
+            border: 1px solid rgba(76, 175, 80, 0.3);
+        }
+        
+        .status-disconnected {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+            border: 1px solid rgba(244, 67, 54, 0.3);
+        }
+        
+        .status-connecting {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+            border: 1px solid rgba(255, 193, 7, 0.3);
+        }
+        
+        .scene-mappings {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .scene-mapping-item {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            padding: 10px;
+            background: var(--bg-secondary);
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .scene-name-select {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--background-primary);
+            color: var(--text-primary);
+        }
+        
+        .animation-select {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            background: var(--background-primary);
+            color: var(--text-primary);
+        }
+        
+        .mapping-actions {
+            display: flex;
+            gap: 5px;
+        }
+        
+        .btn-small {
+            padding: 12px 16px;
+            font-size: 14px;
+            border-radius: 4px;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-weight: 500;
+        }
+        
+        .btn-danger-small {
+            background: #f44336;
+            color: white;
+        }
+        
+        .btn-success-small {
+            background: #4caf50;
+            color: white;
+        }
+        
+        /* Toggle Switch Styles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 24px;
+        }
+        
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--border-color);
+            transition: .4s;
+            border-radius: 24px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: var(--background-primary);
+            transition: .4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--highlight);
+            border-color: var(--highlight);
+        }
+        
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+            background-color: white;
+        }
+        
+        .toggle-switch:hover .toggle-slider {
+            box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.3);
+        }
+        
+        .toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-primary);
+            flex-direction: row-reverse;
+        }
+
+        
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+        
+        .empty-state i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        @media (max-width: 768px) {
+            .form-row {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+            
+            .connection-actions-with-toggle {
+                grid-template-columns: 1fr;
+                gap: 15px;
+            }
+            
+            .connection-actions {
+                justify-content: center;
+            }
+            
+            .toggle-section {
+                align-items: flex-start;
+                text-align: left;
+            }
+            
+            .connection-actions .btn-primary {
+                padding: 10px 20px;
+                font-size: 14px;
+            }
+            
+            .scene-mapping-item {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .mapping-actions {
+                justify-content: center;
+            }
+            
+            .btn-small {
+                padding: 10px 14px;
+                font-size: 13px;
+            }
+        }
+    </style>
+</head>
+
+<body{% if user_theme=='dark' %} class="dark-mode"{% endif %}>
+    <div class="header-container">
+        <!-- Left Side: TV Icon and Title -->
+        <div class="header-left">
+            <i class="fas fa-tv header-icon"></i>
+            <div class="header-title">
+                <h1>OBS-TV-Animator</h1>
+                <p>OBS Management</p>
+            </div>
+        </div>
+
+        <!-- Right Side: Three Rows of Buttons -->
+        <div class="header-right">
+            <!-- Row 1: Share Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="shareTwitter" title="Share on Twitter">
+                    <i class="fa-brands fa-twitter"></i>
+                </button>
+                <button class="btn-primary" id="shareFacebook" title="Share on Facebook">
+                    <i class="fa-brands fa-facebook"></i>
+                </button>
+                <button class="btn-primary" id="shareReddit" title="Share on Reddit">
+                    <i class="fa-brands fa-reddit"></i>
+                </button>
+                <button class="btn-primary" id="shareDiscord" title="Share on Discord">
+                    <i class="fa-brands fa-discord"></i>
+                </button>
+                <div class="user-welcome">
+                    <i class="fa-solid fa-user"></i> Welcome: {{ current_username }}
+                </div>
+            </div>
+
+            <!-- Row 2: Support Buttons -->
+            <div class="button-row">
+                <button class="btn-primary" id="tipButton">
+                    <i class="fa-solid fa-heart"></i> Tip on Stream Elements
+                </button>
+                <button class="btn-primary" id="githubButton">
+                    <i class="fa-brands fa-github"></i> Star on GitHub
+                </button>
+            </div>
+
+            <!-- Row 3: Admin Controls -->
+            <div class="button-row">
+                <button class="theme-toggle" id="themeToggle" title="Toggle Dark Mode">
+                    <i class="fa-solid fa-moon" id="themeIcon"></i>
+                </button>
+                <a href="/admin" class="btn-primary" style="text-decoration: none;" title="Dashboard">
+                    <i class="fa-solid fa-tachometer-alt"></i> Dashboard
+                </a>
+                <a href="/admin/manage" class="btn-primary" style="text-decoration: none;" title="Manage Files">
+                    <i class="fa-solid fa-folder"></i> Files
+                </a>
+                <a href="/admin/logout" class="btn-primary logout-btn" style="text-decoration: none;" title="Logout">
+                    <i class="fa-solid fa-sign-out-alt"></i> Logout
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="admin-container">
+        <div class="success-banner" id="successBanner" style="display: none;">
+            <div class="banner-content">
+                <i class="fa-solid fa-check-circle"></i>
+                <span id="successMessage">Settings saved successfully!</span>
+            </div>
+        </div>
+
+        <!-- Connection Settings Card -->
+        <div class="card">
+            <h3><i class="fa-solid fa-plug"></i> OBS Connection Settings</h3>
+            
+            <div class="connection-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="obsHost">Host/IP Address</label>
+                        <input type="text" id="obsHost" placeholder="localhost" value="localhost">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="obsPort">Port</label>
+                        <input type="number" id="obsPort" placeholder="4455" value="4455" min="1" max="65535">
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="obsPassword">Password (Optional)</label>
+                    <input type="password" id="obsPassword" placeholder="Leave blank if no password">
+                </div>
+                
+                <div class="connection-actions-with-toggle">
+                    <div class="connection-actions">
+                        <button class="btn-primary" onclick="testConnection()">
+                            <i class="fa-solid fa-plug"></i> Test Connection
+                        </button>
+                        <button class="btn-primary" onclick="saveSettings()">
+                            <i class="fa-solid fa-save"></i> Save Settings
+                        </button>
+                    </div>
+                    
+                    <div class="toggle-section">
+                        <label for="obsEnabled" class="toggle-label">
+                            <span>Enable OBS Connection</span>
+                            <div class="toggle-switch">
+                                <input type="checkbox" id="obsEnabled" checked>
+                                <span class="toggle-slider"></span>
+                            </div>
+                        </label>
+                        <small style="color: var(--text-secondary); font-size: 12px; max-width: 200px;">
+                            Toggle off to disable automatic OBS connection attempts
+                        </small>
+                    </div>
+                </div>
+                
+                <div class="status-indicator status-disconnected" id="connectionStatus">
+                    <i class="fa-solid fa-times-circle"></i>
+                    <span>Disconnected</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Scene Mappings Card -->
+        <div class="card">
+            <h3><i class="fa-solid fa-video"></i> Scene → Animation Mappings</h3>
+            <p style="margin-bottom: 20px; color: var(--text-secondary);">
+                Configure which animations trigger when OBS switches to specific scenes. 
+                Connect to OBS and click "Refresh Scenes" to load the latest scene list.
+            </p>
+            
+            <div class="scene-mappings" id="sceneMappings">
+                <!-- Scene mappings will be loaded here -->
+                <div class="empty-state" id="emptyMappings">
+                    <i class="fa-solid fa-video"></i>
+                    <h4>No Scene Mappings Configured</h4>
+                    <p>Add scene mappings to automatically trigger animations when OBS changes scenes.</p>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 15px; margin-top: 20px; flex-wrap: wrap;">
+                <button class="btn-primary" style="padding: 12px 24px; font-size: 16px; font-weight: 600;" onclick="console.log('🔘 Add Scene Mapping button clicked'); addSceneMapping();">
+                    <i class="fa-solid fa-plus"></i> Add Scene Mapping
+                </button>
+                <button class="btn-primary" style="padding: 12px 24px; font-size: 16px; font-weight: 600;" onclick="console.log('🔘 Refresh Scenes button clicked'); refreshScenes();">
+                    <i class="fa-solid fa-refresh"></i> Refresh Scenes
+                </button>
+            </div>
+        </div>
+        
+        <!-- Current Scene Status Card -->
+        <div class="card">
+            <h3><i class="fa-solid fa-eye"></i> Current Scene Status</h3>
+            <div id="currentSceneInfo">
+                <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                    <i class="fa-solid fa-video-slash" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                    <p>Connect to OBS to see current scene information</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="admin-footer">
+        <span>OBS-TV-Animator v{{ app_version }}</span>
+    </footer>
+
+    <!-- Include Socket.IO for real-time updates -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    <script src="../static/js/global.js"></script>
+    <script>
+        // Initialize Socket.IO connection for real-time scene updates
+        const socket = io();
+        
+        // Listen for real-time scene changes from OBS
+        socket.on('scene_changed', function(data) {
+            const receiveTime = new Date().toLocaleTimeString('en-US', { hour12: false, fractionalSecondDigits: 3 });
+            console.log(`🎬 [${receiveTime}] INSTANT scene change received from backend:`, data);
+            
+            // Update the current scene display INSTANTLY
+            if (data.scene_name) {
+                // Mark that we just received fresh real-time data
+                lastRealTimeUpdate = Date.now();
+                
+                // Store the current scene persistently
+                currentScene = data.scene_name;
+                console.log(`📝 [${receiveTime}] INSTANT scene stored:`, currentScene);
+                
+                // Update the status display IMMEDIATELY (don't wait for storage)
+                const currentSceneList = availableScenes.length > 0 ? availableScenes : [];
+                updateCurrentSceneDisplay(data.scene_name, currentSceneList);
+                
+                // Save to persistent storage (async, don't block UI)
+                savePersistentSceneData(data.scene_name);
+                
+                // Show a subtle notification
+                showSuccess(`Scene changed to: ${data.scene_name}`);
+            }
+        });
+        
+        // Register this client for admin updates
+        socket.emit('register_admin');
+    </script>
+    <script>
+        let availableAnimations = [];
+        let availableScenes = [];
+        let sceneMappings = []; // Always initialize as empty array
+        let currentScene = null; // Store the current scene persistently
+        let persistentSceneData = null; // Store data from persistent storage
+        let lastRealTimeUpdate = 0; // Timestamp of last real-time scene update
+        
+        // Load initial data
+        document.addEventListener('DOMContentLoaded', async function() {
+            console.log('🚀 OBS Management Page - Starting initialization...');
+            
+            // Verify functions are defined
+            console.log('🔍 Function check:');
+            console.log('  - addSceneMapping:', typeof addSceneMapping);
+            console.log('  - renderSceneMappings:', typeof renderSceneMappings);
+            console.log('  - updateMapping:', typeof updateMapping);
+            console.log('  - removeMapping:', typeof removeMapping);
+            
+            loadOBSSettings();
+            await loadPersistentSceneData(); // Load persistent scene data first
+            
+            // Display stored scene immediately if we have it
+            if (currentScene) {
+                console.log('🎬 Displaying stored scene immediately:', currentScene);
+                updateCurrentSceneDisplay(currentScene, persistentSceneData?.scene_list || []);
+            }
+            
+            await checkOBSConnectionStatus(); // Check current connection status
+            await loadAvailableAnimations(); // Wait for animations to load first
+            await loadAvailableScenes(); // Wait for scenes to load
+            loadSceneMappings(); // Then load and render mappings
+            
+            // Note: We rely on real-time WebSocket events for scene changes
+            // Only do a single connection status check on startup
+            console.log('✅ Initialization complete - using real-time WebSocket events for scene updates');
+            
+            console.log('✅ OBS Management Page - Initialization complete');
+            
+            // Test button functionality and make functions globally accessible
+            console.log('🧪 Testing function availability...');
+            console.log('  - addSceneMapping:', typeof addSceneMapping);
+            console.log('  - refreshScenes:', typeof refreshScenes);
+            
+            // Make functions globally available
+            window.addSceneMapping = addSceneMapping;
+            window.refreshScenes = refreshScenes;
+            
+            console.log('🔧 Functions attached to window object');
+            
+            window.testAddMapping = function() {
+                console.log('🧪 Test function called, calling addSceneMapping...');
+                addSceneMapping();
+            };
+        });
+        
+        async function loadOBSSettings() {
+            try {
+                console.log('Loading OBS settings...');
+                const response = await fetch('/api/obs/settings');
+                console.log('Settings response status:', response.status);
+                
+                const data = await response.json();
+                console.log('Settings data:', data);
+                
+                if (data.success) {
+                    document.getElementById('obsHost').value = data.settings.host || 'localhost';
+                    document.getElementById('obsPort').value = data.settings.port || 4455;
+                    document.getElementById('obsPassword').value = data.settings.password || '';
+                    document.getElementById('obsEnabled').checked = data.settings.enabled !== false; // Default to true
+                    console.log('Settings loaded successfully');
+                } else {
+                    console.error('Failed to load settings:', data.error);
+                }
+            } catch (error) {
+                console.error('Error loading OBS settings:', error);
+            }
+        }
+        
+        async function loadPersistentSceneData() {
+            try {
+                console.log('💾 Loading persistent scene data...');
+                const response = await fetch('/api/obs/current-scene');
+                console.log('💾 Persistent scene response status:', response.status);
+                
+                const data = await response.json();
+                console.log('💾 Persistent scene data:', data);
+                
+                if (data.success && data.scene_data) {
+                    persistentSceneData = data.scene_data;
+                    currentScene = data.scene_data.current_scene;
+                    console.log('💾 Loaded persistent scene data:', persistentSceneData);
+                    console.log('💾 Set current scene from storage:', currentScene);
+                } else {
+                    console.log('💾 No persistent scene data found or failed to load');
+                    persistentSceneData = null;
+                    currentScene = null;
+                }
+            } catch (error) {
+                console.error('💾 Error loading persistent scene data:', error);
+                persistentSceneData = null;
+                currentScene = null;
+            }
+        }
+        
+        async function savePersistentSceneData(sceneName) {
+            try {
+                console.log('💾 Saving scene to persistent storage:', sceneName);
+                const response = await fetch('/api/obs/current-scene', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        current_scene: sceneName,
+                        scene_list: availableScenes
+                    })
+                });
+                
+                const data = await response.json();
+                if (data.success) {
+                    persistentSceneData = data.scene_data;
+                    console.log('💾 Scene saved to persistent storage successfully');
+                } else {
+                    console.error('💾 Failed to save scene to persistent storage:', data.error);
+                }
+            } catch (error) {
+                console.error('💾 Error saving scene to persistent storage:', error);
+            }
+        }
+        
+        async function checkOBSConnectionStatus() {
+            try {
+                console.log('🔍 Checking OBS connection status on page load...');
+                const response = await fetch('/api/obs/status');
+                console.log('🔍 OBS Status response:', response.status, response.ok);
+                
+                const data = await response.json();
+                console.log('🔍 OBS Status data:', data);
+                
+                if (data.success) {
+                    if (data.connected) {
+                        console.log('✅ OBS is connected! Current scene:', data.current_scene);
+                        console.log('📋 Available scenes:', data.scene_list);
+                        updateConnectionStatus('connected', 'Connected');
+                        
+                        // Check if we have fresh real-time data (within last 30 seconds)
+                        const timeSinceLastRealTime = Date.now() - lastRealTimeUpdate;
+                        const hasFreshRealTimeData = timeSinceLastRealTime < 30000; // 30 seconds
+                        
+                        if (hasFreshRealTimeData && currentScene) {
+                            // We have fresh real-time data, don't override it with potentially stale backend data
+                            console.log(`🎯 Using fresh real-time scene data (${timeSinceLastRealTime}ms old):`, currentScene);
+                            updateCurrentSceneDisplay(currentScene, data.scene_list);
+                        } else {
+                            // Use scene from backend, fallback to memory, then fallback to persistent storage
+                            let sceneToDisplay = data.current_scene || currentScene;
+                            if (!sceneToDisplay && persistentSceneData && persistentSceneData.current_scene) {
+                                sceneToDisplay = persistentSceneData.current_scene;
+                                currentScene = sceneToDisplay; // Update memory from persistent storage
+                                console.log('🎯 Using scene from persistent storage:', sceneToDisplay);
+                            }
+                            
+                            console.log('🎯 Scene to display:', sceneToDisplay, '(backend:', data.current_scene, ', memory:', currentScene, ', persistent:', persistentSceneData?.current_scene, ')');
+                            
+                            // If we got a scene from backend, update our stored value and save to persistent storage
+                            if (data.current_scene) {
+                                currentScene = data.current_scene;
+                                console.log('📝 Updated stored scene from backend:', currentScene);
+                                savePersistentSceneData(data.current_scene); // Save to persistent storage
+                            }
+                            
+                            updateCurrentSceneDisplay(sceneToDisplay, data.scene_list);
+                        }
+                    } else {
+                        console.log('❌ OBS is not connected');
+                        
+                        // Determine status message based on the reason
+                        let statusMessage;
+                        if (data.disabled) {
+                            statusMessage = 'Disconnected';
+                            console.log('📊 OBS connection disabled by user');
+                            updateCurrentSceneDisplay(null, [], 'disabled');
+                        } else if (data.error) {
+                            // Use the specific error message from backend if it's user-friendly
+                            if (data.error.includes('Please verify your connection details')) {
+                                statusMessage = 'Failed to Connect';
+                            } else {
+                                statusMessage = 'Connection Error';
+                            }
+                            console.log('📊 Connection error details:', data.error);
+                            updateCurrentSceneDisplay(null, [], 'failed');
+                        } else {
+                            statusMessage = 'Failed to Connect: Please verify your connection details.';
+                            updateCurrentSceneDisplay(null, [], 'failed');
+                        }
+                        
+                        updateConnectionStatus('disconnected', statusMessage);
+                    }
+                } else {
+                    console.log('❌ Failed to check OBS status:', data.error);
+                    updateConnectionStatus('disconnected', 'Connection Error');
+                    updateCurrentSceneDisplay(null, [], 'error');
+                }
+            } catch (error) {
+                console.error('❌ Error checking OBS connection status:', error);
+                console.error('Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+                updateConnectionStatus('disconnected', 'Connection Error');
+                updateCurrentSceneDisplay(null, [], 'error');
+            }
+        }
+        
+        async function loadAvailableAnimations() {
+            try {
+                console.log('Loading available animations...');
+                const response = await fetch('/admin/api/files');
+                console.log('Files response status:', response.status);
+                
+                const data = await response.json();
+                console.log('Files response data:', data);
+                
+                if (data.files) {
+                    availableAnimations = data.files.map(file => file.name);
+                    console.log('Available animations loaded:', availableAnimations);
+                } else {
+                    console.error('No files property in response:', data);
+                }
+            } catch (error) {
+                console.error('Error loading animations:', error);
+            }
+        }
+        
+        async function loadAvailableScenes() {
+            try {
+                console.log('🎭 Loading available OBS scenes...');
+                console.log('🎭 Making fetch request to /api/obs/scenes...');
+                const response = await fetch('/api/obs/scenes');
+                console.log('🎭 Scenes response status:', response.status);
+                console.log('🎭 Scenes response ok:', response.ok);
+                
+                const data = await response.json();
+                console.log('🎭 Scenes response data:', data);
+                
+                if (data.success && data.scenes) {
+                    availableScenes = data.scenes;
+                    console.log('✅ Available scenes loaded:', availableScenes);
+                } else {
+                    console.log('❌ No scenes available or not connected to OBS:', data.error || 'Unknown error');
+                    availableScenes = [];
+                    
+                    // Throw error if request failed to trigger catch block in refreshScenes
+                    if (!data.success) {
+                        throw new Error(data.error || 'Failed to load scenes from OBS');
+                    }
+                }
+            } catch (error) {
+                console.error('❌ Error loading OBS scenes:', error);
+                console.error('Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+                availableScenes = [];
+                // Re-throw the error so refreshScenes can catch it
+                throw error;
+            }
+        }
+        
+        async function loadSceneMappings() {
+            try {
+                console.log('📋 Loading scene mappings from server...');
+                const response = await fetch('/api/obs/mappings');
+                const data = await response.json();
+                
+                console.log('📋 Scene mappings response:', data);
+                
+                if (data.success) {
+                    // Handle empty or null mappings gracefully
+                    sceneMappings = Array.isArray(data.mappings) ? data.mappings : [];
+                    console.log('📋 Loaded mappings:', sceneMappings);
+                    renderSceneMappings();
+                } else {
+                    console.log('📋 Failed to load mappings, using empty array');
+                    sceneMappings = [];
+                    renderSceneMappings();
+                }
+            } catch (error) {
+                console.error('❌ Error loading scene mappings:', error);
+                // Initialize with empty array if loading fails
+                sceneMappings = [];
+                renderSceneMappings();
+            }
+        }
+        
+        function renderSceneMappings() {
+            const container = document.getElementById('sceneMappings');
+            
+            console.log('Rendering scene mappings...');
+            console.log('Available animations for dropdown:', availableAnimations);
+            console.log('Available scenes for dropdown:', availableScenes);
+            console.log('Scene mappings to render:', sceneMappings);
+            
+            if (sceneMappings.length === 0) {
+                // Show empty state
+                container.innerHTML = `
+                    <div class="empty-state" id="emptyMappings">
+                        <i class="fa-solid fa-video"></i>
+                        <h4>No Scene Mappings Configured</h4>
+                        <p>Add scene mappings to automatically trigger animations when OBS changes scenes.</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Collect all currently used scene names for filtering
+            const usedScenes = sceneMappings
+                .map(mapping => mapping.sceneName)
+                .filter(sceneName => sceneName && sceneName.trim() !== '');
+            
+            console.log('Currently used scenes:', usedScenes);
+            
+            const mappingsHtml = sceneMappings.map((mapping, index) => {
+                // Build animation dropdown options (animations can be reused)
+                const animationOptionsHtml = availableAnimations.map(anim => 
+                    `<option value="${anim}" ${mapping.animation === anim ? 'selected' : ''}>${anim}</option>`
+                ).join('');
+                
+                // Build scene dropdown options - exclude already used scenes except the current one
+                let sceneOptionsHtml = '';
+                if (availableScenes.length > 0) {
+                    const availableSceneOptions = availableScenes.filter(scene => {
+                        // Always include the current mapping's scene (so user can keep it selected)
+                        if (scene === mapping.sceneName) {
+                            return true;
+                        }
+                        // Exclude scenes that are already used by other mappings
+                        return !usedScenes.includes(scene);
+                    });
+                    
+                    sceneOptionsHtml = availableSceneOptions.map(scene => 
+                        `<option value="${scene}" ${mapping.sceneName === scene ? 'selected' : ''}>${scene}</option>`
+                    ).join('');
+                    
+                    // If no available scenes (all used), show a message
+                    if (availableSceneOptions.length === 0) {
+                        sceneOptionsHtml = '<option value="" disabled>All scenes are already mapped</option>';
+                    }
+                } else {
+                    sceneOptionsHtml = '<option value="" disabled>No scenes found - click Refresh Scenes</option>';
+                }
+                
+                console.log(`Mapping ${index} - Animation options:`, animationOptionsHtml);
+                console.log(`Mapping ${index} - Scene options:`, sceneOptionsHtml);
+                console.log(`Mapping ${index} - Available scenes after filtering:`, availableScenes.filter(scene => scene === mapping.sceneName || !usedScenes.includes(scene)));
+                
+                return `
+                <div class="scene-mapping-item">
+                    <select class="scene-name-select" onchange="updateMapping(${index}, 'sceneName', this.value)">
+                        <option value="">Select Scene...</option>
+                        ${sceneOptionsHtml}
+                    </select>
+                    <select class="animation-select" onchange="updateMapping(${index}, 'animation', this.value)">
+                        <option value="">Select Animation...</option>
+                        ${animationOptionsHtml}
+                    </select>
+                    <div class="mapping-actions">
+                        <button class="btn-small btn-success-small" onclick="saveMapping(${index})" title="Save Mapping">
+                            <i class="fa-solid fa-save"></i>
+                            <span>Save</span>
+                        </button>
+                        <button class="btn-small btn-danger-small" onclick="removeMapping(${index})" title="Delete Mapping">
+                            <i class="fa-solid fa-trash"></i>
+                            <span>Delete</span>
+                        </button>
+                    </div>
+                </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = mappingsHtml;
+            console.log('Scene mappings rendered successfully');
+        }
+        
+        async function addSceneMapping() {
+            try {
+                console.log('🔵 Add Scene Mapping button clicked!');
+                console.log('📋 Current sceneMappings array:', sceneMappings);
+                console.log('🎬 Available animations before adding:', availableAnimations);
+                console.log('🎭 Available scenes before adding:', availableScenes);
+                
+                // Ensure sceneMappings is initialized as array
+                if (!Array.isArray(sceneMappings)) {
+                    console.log('⚠️ sceneMappings not an array, initializing...');
+                    sceneMappings = [];
+                }
+                
+                // If animations aren't loaded yet, load them first
+                if (availableAnimations.length === 0) {
+                    console.log('⚠️ Animations not loaded, loading them now...');
+                    await loadAvailableAnimations();
+                }
+                
+                // If scenes aren't loaded yet, load them first
+                if (availableScenes.length === 0) {
+                    console.log('⚠️ Scenes not loaded, loading them now...');
+                    await loadAvailableScenes();
+                }
+                
+                // Add new empty mapping
+                const newMapping = { sceneName: '', animation: '' };
+                sceneMappings.push(newMapping);
+                console.log('➕ Added new mapping:', newMapping);
+                console.log('📋 Updated sceneMappings array:', sceneMappings);
+                
+                // Re-render the mappings
+                console.log('🔄 Re-rendering scene mappings...');
+                renderSceneMappings();
+                
+                console.log('✅ Add Scene Mapping completed successfully!');
+            } catch (error) {
+                console.error('❌ Error in addSceneMapping:', error);
+                console.error('Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+            }
+        }
+        
+        function updateMapping(index, field, value) {
+            if (sceneMappings[index]) {
+                sceneMappings[index][field] = value;
+                // Don't auto-save - wait for user to click the Save button
+            }
+        }
+        
+        function saveMapping(index) {
+            const mapping = sceneMappings[index];
+            if (!mapping.sceneName || !mapping.animation) {
+                alert('Please select both a scene and an animation before saving.');
+                return;
+            }
+            
+            saveMappings();
+            showSuccess(`Mapping saved: ${mapping.sceneName} → ${mapping.animation}`);
+        }
+        
+        function removeMapping(index) {
+            sceneMappings.splice(index, 1);
+            renderSceneMappings();
+            saveMappings(); // Save immediately when deleting
+        }
+        
+        async function testMapping(index) {
+            const mapping = sceneMappings[index];
+            if (!mapping.animation) {
+                alert('Please select an animation first');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/trigger', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ animation: mapping.animation })
+                });
+                
+                if (response.ok) {
+                    showSuccess(`Testing animation: ${mapping.animation}`);
+                } else {
+                    alert('Failed to test animation');
+                }
+            } catch (error) {
+                console.error('Error testing animation:', error);
+                alert('Error testing animation');
+            }
+        }
+        
+        async function saveMappings() {
+            try {
+                const response = await fetch('/api/obs/mappings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mappings: sceneMappings })
+                });
+                
+                if (response.ok) {
+                    showSuccess('Scene mappings saved successfully!');
+                } else {
+                    alert('Failed to save mappings');
+                }
+            } catch (error) {
+                console.error('Error saving mappings:', error);
+            }
+        }
+        
+        async function saveSettings() {
+            const settings = {
+                host: document.getElementById('obsHost').value,
+                port: parseInt(document.getElementById('obsPort').value),
+                password: document.getElementById('obsPassword').value,
+                enabled: document.getElementById('obsEnabled').checked
+            };
+            
+            console.log('Saving OBS settings:', settings);
+            
+            try {
+                const response = await fetch('/api/obs/settings', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(settings)
+                });
+                
+                console.log('Response status:', response.status);
+                const responseData = await response.json();
+                console.log('Response data:', responseData);
+                
+                if (response.ok && responseData.success) {
+                    showSuccess('OBS settings saved successfully!');
+                    
+                    // Force immediate status check to reflect new settings
+                    console.log('🔄 Settings saved, forcing status check...');
+                    setTimeout(async () => {
+                        await checkOBSConnectionStatus();
+                        console.log('✅ Status check completed after settings save');
+                    }, 500); // Small delay to let backend process the settings
+                    
+                } else {
+                    alert(`Failed to save settings: ${responseData.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                console.error('Error saving settings:', error);
+                alert(`Error saving settings: ${error.message}`);
+            }
+        }
+        
+        async function testConnection() {
+            console.log('=== Starting OBS Connection Test ===');
+            updateConnectionStatus('connecting', 'Testing connection...');
+            
+            // Get current settings for debugging
+            const currentSettings = {
+                host: document.getElementById('obsHost').value,
+                port: document.getElementById('obsPort').value,
+                password: document.getElementById('obsPassword').value ? '[REDACTED]' : '[EMPTY]'
+            };
+            console.log('Testing with settings:', currentSettings);
+            
+            const startTime = Date.now();
+            
+            try {
+                console.log('Making POST request to /api/obs/test-connection...');
+                const response = await fetch('/api/obs/test-connection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' }
+                });
+                
+                const duration = Date.now() - startTime;
+                console.log(`Request completed in ${duration}ms`);
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+                
+                const data = await response.json();
+                console.log('Response data:', data);
+                
+                if (response.ok && data.success) {
+                    console.log('✅ Connection test successful!');
+                    updateConnectionStatus('connected', 'Connected');
+                    showSuccess(`OBS connection test successful! (${duration}ms)`);
+                } else {
+                    console.log('❌ Connection test failed:', data.error);
+                    updateConnectionStatus('disconnected', 'Connection Failed');
+                    alert(`Connection failed: ${data.error || 'Unknown error'}`);
+                }
+            } catch (error) {
+                const duration = Date.now() - startTime;
+                console.error('❌ Connection test exception after', duration + 'ms:', error);
+                console.error('Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+                updateConnectionStatus('disconnected', 'Connection Error');
+                alert(`Connection test failed: ${error.message}`);
+            }
+            
+            console.log('=== OBS Connection Test Complete ===');
+        }
+        
+        function updateConnectionStatus(status, message) {
+            console.log('🎯 updateConnectionStatus called:', {status, message});
+            
+            const statusElement = document.getElementById('connectionStatus');
+            console.log('🎯 Status element found:', statusElement ? 'yes' : 'no');
+            
+            const iconMap = {
+                'connected': 'fa-check-circle',
+                'disconnected': 'fa-times-circle',
+                'connecting': 'fa-spinner fa-spin'
+            };
+            
+            const oldClass = statusElement.className;
+            statusElement.className = `status-indicator status-${status}`;
+            statusElement.innerHTML = `
+                <i class="fa-solid ${iconMap[status]}"></i>
+                <span>${message}</span>
+            `;
+            
+            console.log('🎯 Status updated:', {
+                from: oldClass,
+                to: statusElement.className,
+                message: message,
+                icon: iconMap[status]
+            });
+        }
+        
+        function updateCurrentSceneDisplay(currentScene, sceneList, status) {
+            console.log('🎬 updateCurrentSceneDisplay called:', {currentScene, sceneCount: sceneList.length, status});
+            
+            const sceneInfoElement = document.getElementById('currentSceneInfo');
+            
+            if (!currentScene || sceneList.length === 0) {
+                // Not connected or no scene data - show different messages based on status
+                let icon, message;
+                
+                if (status === 'disabled') {
+                    icon = 'fa-toggle-off';
+                    message = 'OBS connection is disabled. Enable it above to connect.';
+                } else if (status === 'failed') {
+                    icon = 'fa-exclamation-triangle';
+                    message = 'Failed to connect to OBS. Please verify your connection details above.';
+                } else if (status === 'error') {
+                    icon = 'fa-exclamation-circle';
+                    message = 'Error checking OBS connection status.';
+                } else {
+                    icon = 'fa-video-slash';
+                    message = 'Connect to OBS to see current scene information';
+                }
+                
+                sceneInfoElement.innerHTML = `
+                    <div style="text-align: center; padding: 20px; color: var(--text-secondary);">
+                        <i class="fa-solid ${icon}" style="font-size: 2rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                        <p>${message}</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Connected with scene data
+            sceneInfoElement.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <div style="margin-bottom: 15px;">
+                        <i class="fa-solid fa-video" style="font-size: 2rem; margin-bottom: 10px; color: var(--success-color);"></i>
+                        <h4 style="margin: 0; color: var(--text-primary);">Current Scene</h4>
+                    </div>
+                    <div style="background: var(--card-bg); padding: 15px; border-radius: 8px; border-left: 4px solid var(--success-color);">
+                        <strong style="font-size: 1.1rem; color: var(--text-primary);">${currentScene || 'Unknown Scene'}</strong>
+                    </div>
+                    <div style="margin-top: 15px; font-size: 0.9rem; color: var(--text-secondary);">
+                        <i class="fa-solid fa-list"></i> ${sceneList.length} total scenes available
+                    </div>
+                </div>
+            `;
+            
+            console.log('🎬 Current scene display updated');
+        }
+
+        
+        async function refreshScenes() {
+            console.log('🔄 refreshScenes function called');
+            console.log('🔄 Refreshing scene list from OBS...');
+            
+            try {
+                console.log('🔄 Calling loadAvailableScenes...');
+                await loadAvailableScenes();
+                console.log('🔄 loadAvailableScenes completed, availableScenes:', availableScenes);
+                
+                console.log('🔄 Calling renderSceneMappings...');
+                renderSceneMappings(); // Re-render with updated scenes
+                
+                if (availableScenes.length > 0) {
+                    console.log('✅ Found scenes, showing success message');
+                    showSuccess(`Found ${availableScenes.length} scenes from OBS!`);
+                } else {
+                    console.log('⚠️ No scenes found');
+                    showSuccess('No scenes found. Make sure OBS is connected.');
+                }
+            } catch (error) {
+                console.error('❌ Error refreshing scenes:', error);
+                console.error('Error details:', {
+                    name: error.name,
+                    message: error.message,
+                    stack: error.stack
+                });
+                alert('Failed to refresh scenes. Make sure OBS is connected.');
+            }
+        }
+        
+        function showSuccess(message) {
+            const banner = document.getElementById('successBanner');
+            const messageElement = document.getElementById('successMessage');
+            
+            messageElement.textContent = message;
+            banner.style.display = 'block';
+            
+            setTimeout(() => {
+                banner.style.display = 'none';
+            }, 3000);
+        }
+    </script>
+</body>
+</html>

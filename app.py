@@ -21,6 +21,7 @@ import asyncio
 from thumbnail_service import get_thumbnail_service
 import websockets
 import threading
+from obswebsocket import obsws, requests, events
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = 'obs-tv-animator-secret-key'
@@ -37,11 +38,20 @@ login_manager.login_message = 'Please log in to access the admin panel.'
 MAIN_PORT = int(os.environ.get('PORT', 8080))
 WEBSOCKET_PORT = MAIN_PORT + 1  # Raw WebSocket port is always main port + 1
 
+def get_current_port():
+    """Get the current server port based on environment (development vs production)"""
+    # Development mode (via dev_local.py) uses Flask's default port 5000
+    if os.environ.get('FLASK_ENV') == 'development':
+        return 5000
+    # Production mode uses the configured MAIN_PORT
+    return MAIN_PORT
+
 ANIMATIONS_DIR = Path(__file__).parent / "animations"
 VIDEOS_DIR = Path(__file__).parent / "videos"
 DATA_DIR = Path(__file__).parent / "data"
 CONFIG_DIR = DATA_DIR / "config"  # Config now under data directory
 LOGS_DIR = DATA_DIR / "logs"      # Logs now under data directory
+THUMBNAILS_DIR = DATA_DIR / "thumbnails"  # Thumbnails directory
 STATE_FILE = DATA_DIR / "state.json"
 USERS_FILE = CONFIG_DIR / "users.json"
 
@@ -52,6 +62,10 @@ VIDEO_EXTENSIONS = {'.mp4', '.webm', '.ogg', '.avi', '.mov', '.mkv'}
 # Connected devices tracking
 connected_devices = {}  # {session_id: {'type': 'tv'|'admin', 'user_agent': str, 'connected_at': timestamp}}
 admin_sessions = set()  # Track admin dashboard sessions
+
+# OBS WebSocket client and scene watcher
+obs_client = None
+obs_scene_watcher = None
 
 # Authentication classes and functions
 class User(UserMixin):
@@ -105,6 +119,16 @@ def admin_required(f):
     def decorated_function(*args, **kwargs):
         if not current_user.is_authenticated:
             return redirect(url_for('admin_login', next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def api_admin_required(f):
+    """Decorator to require admin authentication for API routes - returns JSON errors"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated:
+            return jsonify({'error': 'Authentication required', 'authenticated': False}), 401
         return f(*args, **kwargs)
     return decorated_function
 
@@ -236,6 +260,713 @@ class TriggerFileWatcher:
         self.running = False
 
 
+class OBSSceneWatcher:
+    """File watcher that monitors obs_current_scene.json and triggers animations based on mappings"""
+    
+    def __init__(self, scene_file_path, mappings_file_path):
+        self.scene_file_path = Path(scene_file_path)
+        self.mappings_file_path = Path(mappings_file_path)
+        self.running = False
+        self.watch_thread = None
+        self.last_scene = None
+        self.last_modified = 0
+        
+        print(f"🎬 OBS Scene Watcher initialized:")
+        print(f"   Scene file: {self.scene_file_path}")
+        print(f"   Mappings file: {self.mappings_file_path}")
+    
+    def start_watching(self):
+        """Start watching the OBS scene file for changes"""
+        if self.running:
+            print("⚠️ OBS Scene Watcher is already running")
+            return
+            
+        self.running = True
+        self.watch_thread = Thread(target=self._watch_scene_file, daemon=True)
+        self.watch_thread.start()
+        print("🎬 OBS Scene Watcher started successfully")
+    
+    def _watch_scene_file(self):
+        """Watch the scene file for changes and trigger animations"""
+        print("👀 OBS Scene Watcher monitoring started...")
+        
+        while self.running:
+            try:
+                if self.scene_file_path.exists():
+                    # Check if file was modified
+                    current_modified = self.scene_file_path.stat().st_mtime
+                    
+                    if current_modified > self.last_modified:
+                        self.last_modified = current_modified
+                        print(f"🎬 [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] Scene file changed detected")
+                        
+                        # Read the current scene
+                        try:
+                            with open(self.scene_file_path, 'r', encoding='utf-8') as f:
+                                scene_data = json.load(f)
+                                current_scene = scene_data.get('current_scene')
+                                
+                            if current_scene and current_scene != self.last_scene:
+                                print(f"🎬 Scene change detected: '{self.last_scene}' → '{current_scene}'")
+                                self.last_scene = current_scene
+                                self._handle_scene_change(current_scene)
+                                
+                        except (json.JSONDecodeError, KeyError, Exception) as e:
+                            print(f"❌ Error reading scene file: {e}")
+                
+                time.sleep(0.1)  # Check every 100ms for responsiveness
+                
+            except Exception as e:
+                print(f"❌ Scene watcher error: {e}")
+                time.sleep(1)  # Wait longer on errors
+    
+    def _handle_scene_change(self, scene_name):
+        """Handle a scene change by checking mappings and triggering animations"""
+        try:
+            print(f"🎭 Processing scene change: '{scene_name}'")
+            
+            # Load current scene mappings
+            mappings = self._load_scene_mappings()
+            if not mappings:
+                print("ℹ️ No scene mappings configured")
+                return
+            
+            # Find matching animation for this scene
+            animation_name = None
+            for mapping in mappings:
+                if mapping.get('sceneName') == scene_name:
+                    animation_name = mapping.get('animation')
+                    break
+            
+            if animation_name:
+                print(f"🎭 Found mapping: '{scene_name}' → '{animation_name}'")
+                self._trigger_animation(animation_name, scene_name)
+            else:
+                print(f"ℹ️ No animation mapping found for scene '{scene_name}'")
+                
+        except Exception as e:
+            print(f"❌ Error handling scene change: {e}")
+    
+    def _load_scene_mappings(self):
+        """Load scene mappings from the mappings file"""
+        try:
+            if self.mappings_file_path.exists():
+                with open(self.mappings_file_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    # Handle both formats: direct array or wrapped in 'mappings' key
+                    if isinstance(data, list):
+                        mappings = data
+                    else:
+                        mappings = data.get('mappings', [])
+                    print(f"📋 Loaded {len(mappings)} scene mappings")
+                    return mappings
+            else:
+                print("⚠️ Scene mappings file not found")
+                return []
+        except Exception as e:
+            print(f"❌ Error loading scene mappings: {e}")
+            return []
+    
+    def _trigger_animation(self, animation_name, scene_name):
+        """Trigger an animation by directly updating state and emitting SocketIO commands"""
+        try:
+            print(f"🎬 Triggering animation '{animation_name}' for scene '{scene_name}'")
+            
+            # Validate that the media file exists
+            media_path, media_type = find_media_file(animation_name)
+            if not media_path:
+                print(f"❌ Animation file '{animation_name}' not found")
+                return
+            
+            # Update state directly (same as /trigger route)
+            state = load_state()
+            state['current_animation'] = animation_name
+            save_state(state)
+            print(f"💾 Updated backend state to: {animation_name}")
+            
+            # Import socketio from the global scope
+            global socketio
+            if socketio:
+                # Emit animation change to all clients (same as /trigger route)
+                socketio.emit('animation_changed', {
+                    'current_animation': animation_name,
+                    'media_type': media_type,
+                    'message': f"Media changed to '{animation_name}' ({media_type})",
+                    'refresh_page': True
+                })
+                print(f"📡 [AUTO-TRIGGER] Emitted 'animation_changed' for '{animation_name}' with refresh_page=True")
+
+                # Emit explicit page refresh (same as /trigger route)
+                socketio.emit('page_refresh', {
+                    'reason': 'media_changed',
+                    'new_media': animation_name,
+                    'media_type': media_type
+                })
+                print(f"📡 [AUTO-TRIGGER] Emitted 'page_refresh' for '{animation_name}' - TV should reload now")
+                
+                print(f"✅ Successfully auto-triggered animation: {animation_name} ({media_type}) for scene: {scene_name}")
+            else:
+                print(f"❌ SocketIO not available for auto-trigger")
+            
+        except Exception as e:
+            print(f"❌ Error triggering animation: {e}")
+    
+    def stop_watching(self):
+        """Stop watching the scene file"""
+        self.running = False
+        if self.watch_thread and self.watch_thread.is_alive():
+            print("🛑 Stopping OBS Scene Watcher...")
+            self.watch_thread.join(timeout=2)
+        print("🛑 OBS Scene Watcher stopped")
+
+
+class OBSWebSocketClient:
+    """OBS WebSocket Client to handle scene change events and animation triggers"""
+    
+    def __init__(self):
+        self.client = None
+        self.connected = False
+        self.settings = {}
+        self.scene_mappings = []
+        self.connection_thread = None
+        self.reconnect_attempts = 0
+        self.max_reconnect_attempts = 20  # Increased for better persistence
+        self.auto_reconnect_enabled = True
+        self.connection_monitor_thread = None
+        self.should_be_connected = False  # Track intended connection state
+        
+    def load_settings(self):
+        """Load OBS connection settings from config file"""
+        try:
+            obs_config_path = DATA_DIR / 'config' / 'obs_settings.json'
+            print(f"📂 Looking for settings at: {obs_config_path}")
+            
+            if obs_config_path.exists():
+                print("✅ Settings file found, loading...")
+                with open(obs_config_path, 'r') as f:
+                    self.settings = json.load(f)
+                
+                # Log settings without password
+                settings_log = self.settings.copy()
+                if 'password' in settings_log and settings_log['password']:
+                    settings_log['password'] = '[REDACTED]'
+                else:
+                    settings_log['password'] = '[EMPTY]'
+                print(f"📋 Loaded settings: {settings_log}")
+                return True
+            else:
+                print("❌ Settings file not found")
+                return False
+        except Exception as e:
+            print(f"❌ Error loading OBS settings: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+    
+    def load_scene_mappings(self):
+        """Load scene to animation mappings from config file"""
+        try:
+            mappings_path = DATA_DIR / 'config' / 'obs_mappings.json'
+            if mappings_path.exists():
+                with open(mappings_path, 'r') as f:
+                    self.scene_mappings = json.load(f)
+                return True
+            return False
+        except Exception as e:
+            print(f"❌ Error loading OBS scene mappings: {e}")
+            return False
+    
+    def connect(self):
+        """Establish connection to OBS WebSocket server"""
+        if not self.load_settings():
+            print("⚠️  No OBS settings found, skipping connection")
+            return False
+            
+        if not self.load_scene_mappings():
+            print("⚠️  No scene mappings found, OBS events will be ignored")
+            self.scene_mappings = []
+        
+        try:
+            print(f"🔌 Attempting to connect to OBS at {self.settings.get('host', 'localhost')}:{self.settings.get('port', 4455)}")
+            
+            # Create OBS WebSocket client
+            self.client = obsws(
+                host=self.settings.get('host', 'localhost'),
+                port=self.settings.get('port', 4455),
+                password=self.settings.get('password', '')
+            )
+            
+            # Connect to OBS
+            self.client.connect()
+            
+            # Test the connection by getting version
+            version_info = self.client.call(requests.GetVersion())
+            print(f"✅ Connected to OBS Studio {version_info.getObsVersion()}")
+            print(f"✅ OBS WebSocket version: {version_info.getObsWebSocketVersion()}")
+            
+            self.connected = True
+            self.should_be_connected = True  # Mark that we want to stay connected
+            self.reconnect_attempts = 0
+            
+            # Register for scene change events
+            try:
+                # Try newer OBS WebSocket event first
+                if hasattr(events, 'CurrentProgramSceneChanged'):
+                    self.client.register(self._on_scene_changed, events.CurrentProgramSceneChanged)
+                    print("👂 Registered for CurrentProgramSceneChanged events")
+                elif hasattr(events, 'SwitchScenes'):
+                    self.client.register(self._on_scene_changed, events.SwitchScenes)
+                    print("👂 Registered for SwitchScenes events (fallback)")
+                else:
+                    print("⚠️ No suitable scene change event found")
+            except Exception as event_error:
+                print(f"⚠️ Error registering for scene events: {event_error}")
+                # Try fallback
+                try:
+                    self.client.register(self._on_scene_changed, events.SwitchScenes)
+                    print("👂 Fallback: Registered for SwitchScenes events")
+                except Exception as fallback_error:
+                    print(f"❌ Failed to register for any scene events: {fallback_error}")
+            
+            print("👂 OBS event listener setup complete, waiting for scene changes...")
+            
+            # Start connection monitor for persistent connection
+            self._start_connection_monitor()
+            
+            return True
+            
+        except Exception as e:
+            print(f"❌ Failed to connect to OBS: {e}")
+            self.connected = False
+            self._schedule_reconnect()
+            return False
+    
+    def _on_scene_changed(self, message):
+        """Handle OBS scene change events - BULLETPROOF VERSION"""
+        scene_name = None
+        event_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        
+        try:
+            print(f"🎬 [{event_time}] Scene change event received, type: {type(message)}")
+            
+            # Handle different event formats with bulletproof extraction
+            try:
+                if hasattr(message, 'sceneName') and message.sceneName:
+                    scene_name = str(message.sceneName)
+                    print(f"🎬 Got scene name from .sceneName: {scene_name}")
+                elif hasattr(message, 'getSceneName') and callable(message.getSceneName):
+                    scene_name = str(message.getSceneName())
+                    print(f"🎬 Got scene name from .getSceneName(): {scene_name}")
+                elif hasattr(message, 'datain') and isinstance(message.datain, dict) and 'sceneName' in message.datain:
+                    scene_name = str(message.datain['sceneName'])
+                    print(f"🎬 Got scene name from datain: {scene_name}")
+                else:
+                    print(f"🎬 Could not extract scene name. Message attributes: {dir(message)}")
+                    if hasattr(message, '__dict__'):
+                        print(f"🎬 Message dict: {message.__dict__}")
+                    return
+            except Exception as extract_error:
+                print(f"❌ CRITICAL: Scene name extraction failed: {extract_error}")
+                return
+            
+            if not scene_name or not isinstance(scene_name, str) or len(scene_name.strip()) == 0:
+                print(f"❌ Invalid scene name extracted: '{scene_name}'")
+                return
+                
+            scene_name = scene_name.strip()
+            print(f"🎬 [{event_time}] INSTANT OBS Scene change detected: '{scene_name}'")
+            
+        except Exception as initial_error:
+            print(f"❌ CRITICAL: Initial scene change processing failed: {initial_error}")
+            print(f"❌ Message type: {type(message)}, Message: {message}")
+            return
+        
+        # Process the scene change in separate try blocks to prevent cascading failures
+        
+        # 1. Update scene data via API route (for file storage only)
+        try:
+            import requests
+            import json
+            
+            # Get the current server port dynamically
+            current_port = get_current_port()
+            
+            # Use the existing API route to save scene data
+            response = requests.post(f'http://localhost:{current_port}/api/obs/current-scene', 
+                                   json={'current_scene': scene_name},
+                                   headers={'Content-Type': 'application/json'},
+                                   timeout=1)
+            
+            storage_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+            if response.status_code == 200:
+                print(f"💾 [{storage_time}] INSTANT scene data saved: {scene_name}")
+            else:
+                print(f"⚠️ Scene data save failed (status {response.status_code}): {response.text}")
+        except Exception as api_error:
+            print(f"⚠️ Scene data save failed (non-critical): {api_error}")
+            # Don't return - continue with other operations
+        
+        # 2. Emit to frontend (independent operation)
+        try:
+            global socketio
+            if 'socketio' in globals() and socketio:
+                emit_time = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+                socketio.emit('scene_changed', {
+                    'scene_name': scene_name,
+                    'timestamp': time.time(),
+                    'event_time': emit_time
+                })
+                print(f"📡 [{emit_time}] INSTANT Socket.IO emission to frontend: {scene_name}")
+            else:
+                print("⚠️ SocketIO not available for scene change notification")
+        except Exception as emit_error:
+            print(f"⚠️ Socket.IO emission failed (non-critical): {emit_error}")
+            # Don't return - continue with other operations
+        
+        # Note: Animation triggering is now handled by OBSSceneWatcher file watcher
+        # This prevents duplicate triggers and provides better separation of concerns
+        
+        print(f"✅ [{datetime.now().strftime('%H:%M:%S.%f')[:-3]}] Scene change processing completed successfully")
+    
+    def _schedule_reconnect(self):
+        """Schedule a reconnection attempt"""
+        if self.reconnect_attempts < self.max_reconnect_attempts:
+            self.reconnect_attempts += 1
+            delay = min(30, 2 ** self.reconnect_attempts)  # Exponential backoff, max 30 seconds
+            print(f"⏰ Scheduling OBS reconnection attempt {self.reconnect_attempts}/{self.max_reconnect_attempts} in {delay} seconds")
+            
+            def reconnect_after_delay():
+                time.sleep(delay)
+                if not self.connected:  # Only reconnect if still disconnected
+                    print(f"🔄 Attempting OBS reconnection ({self.reconnect_attempts}/{self.max_reconnect_attempts})")
+                    self.connect()
+            
+            Thread(target=reconnect_after_delay, daemon=True).start()
+        else:
+            print(f"❌ Max OBS reconnection attempts ({self.max_reconnect_attempts}) reached. Will retry later...")
+            # Reset attempts after a longer delay to try again
+            def reset_attempts_later():
+                time.sleep(300)  # Wait 5 minutes before allowing retries again
+                self.reconnect_attempts = 0
+                if self.should_be_connected and not self.connected:
+                    print("🔄 Retrying OBS connection after cooldown period...")
+                    self._schedule_reconnect()
+            Thread(target=reset_attempts_later, daemon=True).start()
+    
+    def _start_connection_monitor(self):
+        """Start a background thread to monitor and maintain OBS connection"""
+        if self.connection_monitor_thread and self.connection_monitor_thread.is_alive():
+            return
+            
+        def connection_monitor():
+            print("👀 Starting OBS connection monitor with PERSISTENT RECONNECTION...")
+            monitor_loop_count = 0
+            while self.auto_reconnect_enabled:
+                try:
+                    time.sleep(10)  # Check every 10 seconds
+                    monitor_loop_count += 1
+                    
+                    # Debug logging every few loops
+                    if monitor_loop_count % 6 == 0:  # Every minute
+                        print(f"👀 Connection monitor status: should_connect={self.should_be_connected}, connected={self.connected}, auto_reconnect={self.auto_reconnect_enabled}")
+                    
+                    if self.should_be_connected and not self.connected:
+                        print("🔄 Connection monitor: OBS DISCONNECTED - FORCING RECONNECT...")
+                        success = self.connect()
+                        if success:
+                            print("✅ Connection monitor: RECONNECTION SUCCESSFUL")
+                        else:
+                            print("❌ Connection monitor: Reconnection failed, will retry in 10 seconds")
+                    elif self.connected and self.client:
+                        # Test connection with a simple request
+                        try:
+                            self.client.call(requests.GetVersion())
+                            # Connection is healthy - no logging needed
+                        except Exception as e:
+                            print(f"🔄 Connection monitor: OBS connection test FAILED: {e}")
+                            print("🔄 Marking as disconnected and forcing reconnect...")
+                            self.connected = False
+                            if self.should_be_connected:
+                                success = self.connect()
+                                if success:
+                                    print("✅ Connection monitor: RECONNECTION after test failure SUCCESSFUL")
+                                else:
+                                    print("❌ Connection monitor: Reconnection after test failure FAILED")
+                                
+                except Exception as e:
+                    print(f"❌ CRITICAL: Connection monitor error: {e}")
+                    print("🔄 Connection monitor continuing despite error...")
+                    time.sleep(30)  # Wait longer on monitor errors
+                    
+        self.connection_monitor_thread = Thread(target=connection_monitor, daemon=True)
+        self.connection_monitor_thread.start()
+    
+    def disconnect(self, permanent=False, force=False):
+        """Disconnect from OBS WebSocket server
+        
+        Args:
+            permanent (bool): If True, disables auto-reconnection. If False, allows reconnection.
+            force (bool): If True, bypasses settings check for permanent disconnection.
+        """
+        self.connected = False
+        
+        if permanent and not force:
+            # Check if OBS is enabled in settings before allowing permanent disconnect
+            try:
+                obs_config_path = DATA_DIR / 'config' / 'obs_settings.json'
+                if obs_config_path.exists():
+                    with open(obs_config_path, 'r') as f:
+                        settings = json.load(f)
+                    
+                    if settings.get('enabled', True):
+                        print("🚨 REFUSING permanent disconnect - OBS is enabled in settings!")
+                        print("🔄 Keeping auto-reconnection active per user settings")
+                        # Don't disable auto-reconnection if settings say to stay connected
+                        return
+                        
+            except Exception as settings_error:
+                print(f"⚠️ Could not check settings for disconnect: {settings_error}")
+                # If we can't check settings, be safe and keep connection active
+                print("🚨 Refusing permanent disconnect due to settings check failure")
+                return
+            
+            self.should_be_connected = False  # Disable auto-reconnection
+            self.auto_reconnect_enabled = False
+            print("🔌 Permanently disconnecting from OBS WebSocket server")
+        else:
+            print("🔌 Temporarily disconnecting from OBS WebSocket server")
+            
+        if self.client:
+            try:
+                self.client.disconnect()
+                print("✅ Disconnected from OBS WebSocket server")
+            except Exception as e:
+                print(f"⚠️  Error during OBS disconnect: {e}")
+            finally:
+                self.client = None
+    
+    def test_connection(self):
+        """Test OBS WebSocket connection without establishing persistent connection"""
+        print("📋 test_connection() called")
+        
+        if not self.load_settings():
+            print("❌ No settings found")
+            return False, "No OBS settings configured"
+        
+        # Log connection attempt details (without password)
+        connection_info = {
+            'host': self.settings.get('host', 'localhost'),
+            'port': self.settings.get('port', 4455),
+            'password_set': bool(self.settings.get('password', ''))
+        }
+        print(f"🔌 Attempting connection to: {connection_info}")
+        
+        try:
+            import time
+            start_time = time.time()
+            
+            print("📱 Creating obsws client...")
+            # Create temporary client for testing
+            test_client = obsws(
+                host=self.settings.get('host', 'localhost'),
+                port=self.settings.get('port', 4455),
+                password=self.settings.get('password', '')
+            )
+            print("✅ obsws client created successfully")
+            
+            # Test the connection
+            print("🔗 Calling connect()...")
+            test_client.connect()
+            connect_time = time.time() - start_time
+            print(f"✅ Connected successfully in {connect_time:.2f}s")
+            
+            print("📞 Calling GetVersion()...")
+            version_start = time.time()
+            version_info = test_client.call(requests.GetVersion())
+            version_time = time.time() - version_start
+            print(f"✅ GetVersion completed in {version_time:.2f}s")
+            
+            print("🔌 Disconnecting...")
+            test_client.disconnect()
+            
+            total_time = time.time() - start_time
+            obs_version = version_info.getObsVersion()
+            success_msg = f"Connected to OBS Studio {obs_version} (total: {total_time:.2f}s)"
+            print(f"🎉 {success_msg}")
+            
+            return True, success_msg
+            
+        except Exception as e:
+            total_time = time.time() - start_time if 'start_time' in locals() else 0
+            error_msg = f"Connection failed: {str(e)}"
+            print(f"❌ {error_msg} (after {total_time:.2f}s)")
+            
+            # Add more specific error information
+            if "10060" in str(e):
+                print("🔍 Error 10060 = Connection timeout (target not responding)")
+                print("💡 Possible causes:")
+                print("   - OBS Studio not running")
+                print("   - OBS WebSocket server not enabled")
+                print("   - Wrong host/port")
+                print("   - Firewall blocking connection")
+            elif "10061" in str(e):
+                print("🔍 Error 10061 = Connection actively refused")
+                print("💡 Possible causes:")
+                print("   - OBS WebSocket server disabled")
+                print("   - Wrong port number")
+            
+            return False, error_msg
+    
+    def get_current_scene(self):
+        """Get the current active scene from OBS"""
+        if not self.connected or not self.client:
+            return None
+        
+        try:
+            # Try the newer OBS WebSocket API first
+            current_scene = self.client.call(requests.GetCurrentProgramScene())
+            print(f"📊 GetCurrentProgramScene response: {current_scene}")
+            
+            # Handle different response formats
+            if hasattr(current_scene, 'sceneName'):
+                return current_scene.sceneName
+            elif hasattr(current_scene, 'getName'):
+                return current_scene.getName()
+            elif isinstance(current_scene, dict) and 'sceneName' in current_scene:
+                return current_scene['sceneName']
+            else:
+                print(f"📊 Unexpected current scene response format: {type(current_scene)}, {current_scene}")
+                return None
+                
+        except Exception as e:
+            print(f"❌ GetCurrentProgramScene failed: {e}")
+            # Fallback to older API
+            try:
+                current_scene = self.client.call(requests.GetCurrentScene())
+                print(f"📊 GetCurrentScene (fallback) response: {current_scene}")
+                
+                if hasattr(current_scene, 'getName'):
+                    return current_scene.getName()
+                elif hasattr(current_scene, 'sceneName'):
+                    return current_scene.sceneName
+                elif isinstance(current_scene, dict) and 'sceneName' in current_scene:
+                    return current_scene['sceneName']
+                else:
+                    print(f"📊 Unexpected fallback scene response format: {type(current_scene)}, {current_scene}")
+                    return None
+                    
+            except Exception as fallback_error:
+                print(f"❌ Error getting current OBS scene (both methods failed): {fallback_error}")
+                return None
+    
+    def get_scene_list(self):
+        """Get list of all scenes from OBS"""
+        if not self.connected or not self.client:
+            return []
+        
+        try:
+            scene_list = self.client.call(requests.GetSceneList())
+            return [scene['sceneName'] for scene in scene_list.getScenes()]
+        except Exception as e:
+            print(f"❌ Error getting OBS scene list: {e}")
+            return []
+    
+    def _save_current_scene_to_storage(self, scene_name):
+        """Save current scene to persistent storage file - MINIMAL VERSION (current scene only)"""
+        if not scene_name or not isinstance(scene_name, str):
+            raise ValueError(f"Invalid scene name for storage: {scene_name}")
+            
+        try:
+            # Ensure scene name is clean
+            scene_name = str(scene_name).strip()
+            if not scene_name:
+                raise ValueError("Scene name is empty after cleaning")
+            
+            current_scene_path = DATA_DIR / 'config' / 'obs_current_scene.json'
+            
+            # Simple data structure - only current scene and timestamp
+            scene_data = {
+                'current_scene': None,
+                'last_updated': None
+            }
+            
+            if current_scene_path.exists():
+                try:
+                    with open(current_scene_path, 'r', encoding='utf-8') as f:
+                        loaded_data = json.load(f)
+                        if isinstance(loaded_data, dict):
+                            # Only preserve current_scene and last_updated, ignore scene_list
+                            scene_data['current_scene'] = loaded_data.get('current_scene')
+                            scene_data['last_updated'] = loaded_data.get('last_updated')
+                        else:
+                            print("⚠️ Invalid JSON structure in storage file, using defaults")
+                except (json.JSONDecodeError, UnicodeDecodeError) as parse_error:
+                    print(f"⚠️ Could not parse existing storage file: {parse_error}")
+                    # Use default scene_data structure
+                except Exception as file_error:
+                    print(f"⚠️ Could not read existing storage file: {file_error}")
+                    # Use default scene_data structure
+            
+            # Update current scene and timestamp only
+            scene_data['current_scene'] = scene_name
+            scene_data['last_updated'] = datetime.now().isoformat()
+            
+            # Ensure config directory exists
+            try:
+                config_dir = DATA_DIR / 'config'
+                config_dir.mkdir(parents=True, exist_ok=True)
+            except Exception as dir_error:
+                print(f"❌ Could not create config directory: {dir_error}")
+                raise
+            
+            # Save updated data with atomic write
+            try:
+                temp_path = current_scene_path.with_suffix('.tmp')
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    json.dump(scene_data, f, indent=2, ensure_ascii=False)
+                
+                # Atomic rename to prevent corruption
+                temp_path.replace(current_scene_path)
+                
+            except Exception as write_error:
+                print(f"❌ Could not write to storage file: {write_error}")
+                # Clean up temp file if it exists
+                try:
+                    if temp_path.exists():
+                        temp_path.unlink()
+                except:
+                    pass
+                raise
+                
+        except Exception as e:
+            print(f"❌ CRITICAL: Storage save operation failed: {e}")
+            raise  # Re-raise so caller can handle
+    
+
+    
+    def enable_persistent_connection(self):
+        """Enable persistent auto-reconnection to OBS"""
+        print("🔄 Enabling persistent OBS connection...")
+        self.auto_reconnect_enabled = True
+        self.should_be_connected = True
+        
+        # If not connected, try to connect
+        if not self.connected:
+            if not self.settings:  # Only load settings if not already loaded
+                if not self.load_settings():
+                    print("❌ No OBS settings available for persistent connection")
+                    return False
+            
+            print("🔌 Attempting OBS connection for persistent mode...")
+            success = self.connect()
+            if not success:
+                print("⚠️  Initial connection failed, but will keep trying...")
+        
+        # Start connection monitor if not already running
+        self._start_connection_monitor()
+        return self.connected
+
+
 def load_state():
     """Load the current state from state.json"""
     try:
@@ -252,6 +983,12 @@ def save_state(state):
     """Save the current state to state.json"""
     with open(STATE_FILE, 'w') as f:
         json.dump(state, f, indent=4)
+
+
+def ensure_state_file():
+    """Initialize state file if it doesn't exist"""
+    if not STATE_FILE.exists():
+        save_state({"current_animation": "anim1.html"})
 
 
 def get_animation_files():
@@ -412,6 +1149,7 @@ def trigger():
             'message': f"Media changed to '{media_file}' ({media_type})",
             'refresh_page': True
         })
+        print(f"📡 [TRIGGER] Emitted 'animation_changed' for '{media_file}' with refresh_page=True")
 
         # Emit explicit page refresh
         socketio.emit('page_refresh', {
@@ -419,6 +1157,7 @@ def trigger():
             'new_media': media_file,
             'media_type': media_type
         })
+        print(f"📡 [TRIGGER] Emitted 'page_refresh' for '{media_file}' - TV should reload now")
 
         return jsonify({
             "success": True,
@@ -1068,6 +1807,24 @@ def admin_users():
                          app_version=__version__)
 
 
+@app.route('/admin/obs')
+@admin_required
+def admin_obs_management():
+    """OBS WebSocket management page"""
+    # Get user's theme preference
+    try:
+        users_data = load_users_config()
+        user_data = users_data.get('admin_users', {}).get(current_user.username, {})
+        user_theme = user_data.get('theme', 'dark')  # Default to dark
+    except Exception:
+        user_theme = 'dark'  # Fallback to dark theme
+    
+    return render_template('admin_obs_management.html', 
+                         user_theme=user_theme,
+                         current_username=current_user.username,
+                         app_version=__version__)
+
+
 @app.route('/admin/instructions')
 @admin_required
 def admin_instructions():
@@ -1320,7 +2077,7 @@ def api_change_password():
 
 
 @app.route('/admin/api/status')
-@admin_required
+@api_admin_required
 def admin_status():
     """API endpoint for admin dashboard status"""
     try:
@@ -1330,6 +2087,11 @@ def admin_status():
         
         # Get device information
         devices_info = get_connected_devices_info()
+        
+        # Get OBS connection status
+        obs_connected = False
+        if obs_client:
+            obs_connected = obs_client.connected
         
         return jsonify({
             'status': 'running',
@@ -1346,14 +2108,15 @@ def admin_status():
             'total_connections': devices_info['total_count'],
             'available_animations': get_animation_files(),
             'available_videos': get_video_files(),
-            'available_media': get_all_media_files()
+            'available_media': get_all_media_files(),
+            'obs_connected': obs_connected
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
 
 @app.route('/admin/api/files')
-@admin_required
+@api_admin_required
 def admin_list_files():
     """API endpoint to list all files with metadata"""
     try:
@@ -1463,7 +2226,7 @@ def admin_upload_file():
         
         # Generate thumbnail asynchronously
         try:
-            thumbnail_service = get_thumbnail_service("http://localhost:8080")
+            thumbnail_service = get_thumbnail_service(f"http://localhost:{get_current_port()}")
             
             def generate_thumbnail_background():
                 """Generate thumbnail in background thread"""
@@ -1527,7 +2290,7 @@ def admin_delete_file(file_type, filename):
         
         # Clean up thumbnail if it exists
         try:
-            thumbnail_service = get_thumbnail_service("http://localhost:8080")
+            thumbnail_service = get_thumbnail_service(f"http://localhost:{get_current_port()}")
             # Use get_thumbnail_path directly for more reliable deletion
             thumbnail_path = thumbnail_service.get_thumbnail_path(filename)
             if thumbnail_path.exists():
@@ -1551,7 +2314,7 @@ def admin_thumbnail(filename):
     """Generate or serve thumbnails for files"""
     try:
         # Get the thumbnail service
-        thumbnail_service = get_thumbnail_service("http://localhost:8080")
+        thumbnail_service = get_thumbnail_service(f"http://localhost:{get_current_port()}")
         
         # Try to serve existing thumbnail
         thumbnail_path = thumbnail_service.serve_thumbnail(filename)
@@ -1646,7 +2409,7 @@ def admin_thumbnail(filename):
 def admin_generate_thumbnails():
     """Generate thumbnails for all files"""
     try:
-        thumbnail_service = get_thumbnail_service("http://localhost:8080")
+        thumbnail_service = get_thumbnail_service(f"http://localhost:{get_current_port()}")
         
         def generate_all_thumbnails():
             """Generate thumbnails for all files in background"""
@@ -1696,7 +2459,7 @@ def admin_generate_thumbnails():
 def admin_thumbnails_status():
     """Get thumbnail generation status"""
     try:
-        thumbnail_service = get_thumbnail_service("http://localhost:8080")
+        thumbnail_service = get_thumbnail_service(f"http://localhost:{get_current_port()}")
         
         # Count existing thumbnails
         thumbnail_count = len(list(thumbnail_service.thumbnails_dir.glob('*.png')))
@@ -1740,7 +2503,7 @@ def admin_thumbnails_status():
 def admin_thumbnails_debug():
     """Debug endpoint to list actual thumbnail files"""
     try:
-        thumbnail_service = get_thumbnail_service("http://localhost:8080")
+        thumbnail_service = get_thumbnail_service(f"http://localhost:{get_current_port()}")
         
         # List all PNG files in thumbnails directory
         thumbnail_files = list(thumbnail_service.thumbnails_dir.glob('*.png'))
@@ -1909,19 +2672,641 @@ if __name__ == '__main__':
     print("  • Enables status indicators, WebSocket sync, and page refresh")
     print("  • Visit /admin/instructions/getting-started for complete guide")
     print("=" * 84)
-    
-    # Initialize file trigger watcher for StreamerBot
-    trigger_file = DATA_DIR / "trigger.txt"
-    file_watcher = TriggerFileWatcher(str(trigger_file))
-    file_watcher.start_watching()
-    
-    # Start the raw WebSocket server for StreamerBot
-    print(f"🚀 Starting Raw WebSocket server on port {WEBSOCKET_PORT} for StreamerBot...")
-    websocket_thread = raw_websocket_server.start_server()
-    
-    # Give the WebSocket server a moment to start
+
+
+# =============================================================================
+# OBS WebSocket API Routes
+# =============================================================================
+
+@app.route('/api/obs/settings', methods=['GET'])
+@admin_required
+def api_obs_settings_get():
+    """Get OBS connection settings"""
+    try:
+        # Create config path if it doesn't exist
+        obs_config_path = DATA_DIR / 'config' / 'obs_settings.json'
+        
+        if obs_config_path.exists():
+            with open(obs_config_path, 'r') as f:
+                settings = json.load(f)
+        else:
+            # Default settings
+            settings = {
+                'host': 'localhost',
+                'port': 4455,
+                'password': '',
+                'enabled': True
+            }
+        
+        return jsonify({'success': True, 'settings': settings})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/obs/settings', methods=['POST'])
+@admin_required
+def api_obs_settings_post():
+    """Save OBS connection settings"""
+    try:
+        data = request.get_json()
+        
+        # Validate input
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        settings = {
+            'host': data.get('host', 'localhost'),
+            'port': int(data.get('port', 4455)),
+            'password': data.get('password', ''),
+            'enabled': data.get('enabled', True)
+        }
+        
+        # Ensure config directory exists
+        config_dir = DATA_DIR / 'config'
+        config_dir.mkdir(exist_ok=True)
+        
+        # Save settings
+        obs_config_path = config_dir / 'obs_settings.json'
+        with open(obs_config_path, 'w') as f:
+            json.dump(settings, f, indent=2)
+        
+        # Check if we need to restart the OBS client
+        global obs_client
+        needs_restart = False
+        
+        # Check if settings actually changed significantly
+        if obs_client and obs_client.settings:
+            old_settings = obs_client.settings
+            if (old_settings.get('host') != settings['host'] or 
+                old_settings.get('port') != settings['port'] or 
+                old_settings.get('password') != settings['password']):
+                needs_restart = True
+                print(f"🔄 Connection settings changed, restart required")
+        else:
+            needs_restart = True
+            print(f"🔄 No existing client or settings, initial connection required")
+        
+        if needs_restart:
+            print(f"🔄 Restarting OBS client with new settings...")
+            
+            # Disconnect old client if it exists (force because we're changing settings)
+            if obs_client:
+                try:
+                    obs_client.disconnect(permanent=True, force=True)
+                except:
+                    pass
+            
+            # Create new client and load the fresh settings
+            obs_client = OBSWebSocketClient()
+        
+        # Always ensure connection if enabled (whether restart or not)
+        if settings.get('enabled', True):
+            print(f"🔄 OBS connection enabled, ensuring persistent connection...")
+            if obs_client:
+                obs_client.enable_persistent_connection()
+                connected = obs_client.connected
+                print(f"🔄 Connection result: {connected}")
+            else:
+                connected = False
+        else:
+            print(f"🔄 OBS connection disabled in settings")
+            if obs_client:
+                obs_client.disconnect(permanent=True, force=True)  # Force because user disabled it
+            connected = False
+        
+        return jsonify({'success': True, 'auto_connected': connected, 'enabled': settings.get('enabled', True)})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/obs/mappings', methods=['GET'])
+@admin_required
+def api_obs_mappings_get():
+    """Get scene to animation mappings"""
+    try:
+        # Create config path if it doesn't exist
+        mappings_path = DATA_DIR / 'config' / 'obs_mappings.json'
+        
+        if mappings_path.exists():
+            with open(mappings_path, 'r') as f:
+                content = f.read().strip()
+                if content:
+                    try:
+                        mappings = json.loads(content)
+                        # Ensure it's a list
+                        if not isinstance(mappings, list):
+                            mappings = []
+                    except json.JSONDecodeError:
+                        # Handle malformed JSON
+                        mappings = []
+                else:
+                    # Handle empty file
+                    mappings = []
+        else:
+            mappings = []
+        
+        return jsonify({'success': True, 'mappings': mappings})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/obs/mappings', methods=['POST'])
+@admin_required
+def api_obs_mappings_post():
+    """Save scene to animation mappings"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'mappings' not in data:
+            return jsonify({'success': False, 'error': 'No mappings data provided'}), 400
+        
+        mappings = data['mappings']
+        
+        # Validate mappings structure
+        for mapping in mappings:
+            if not isinstance(mapping, dict) or 'sceneName' not in mapping or 'animation' not in mapping:
+                return jsonify({'success': False, 'error': 'Invalid mapping structure'}), 400
+        
+        # Ensure config directory exists
+        config_dir = DATA_DIR / 'config'
+        config_dir.mkdir(exist_ok=True)
+        
+        # Save mappings
+        mappings_path = config_dir / 'obs_mappings.json'
+        with open(mappings_path, 'w') as f:
+            json.dump(mappings, f, indent=2)
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/obs/test-connection', methods=['POST'])
+@admin_required
+def api_obs_test_connection():
+    """Test OBS WebSocket connection"""
+    print("=== OBS Connection Test Started ===")
     import time
-    time.sleep(1)
-    print("✓ Raw WebSocket server ready!")
+    start_time = time.time()
     
-    socketio.run(app, host='0.0.0.0', port=MAIN_PORT, debug=False, allow_unsafe_werkzeug=True)
+    try:
+        print("Creating temporary OBS client for testing...")
+        test_client = OBSWebSocketClient()
+        
+        # Load and log settings (without password)
+        if test_client.load_settings():
+            settings_log = test_client.settings.copy()
+            if 'password' in settings_log and settings_log['password']:
+                settings_log['password'] = '[REDACTED]'
+            else:
+                settings_log['password'] = '[EMPTY]'
+            print(f"Loaded settings: {settings_log}")
+        else:
+            print("❌ No OBS settings found!")
+            return jsonify({'success': False, 'error': 'No OBS settings configured'})
+        
+        print("Calling test_connection()...")
+        success, message = test_client.test_connection()
+        
+        duration = time.time() - start_time
+        print(f"Test completed in {duration:.2f} seconds")
+        
+        if success:
+            print(f"✅ Connection successful: {message}")
+            return jsonify({'success': True, 'message': message})
+        else:
+            print(f"❌ Connection failed: {message}")
+            return jsonify({'success': False, 'error': message})
+            
+    except Exception as e:
+        duration = time.time() - start_time
+        print(f"❌ Exception during test after {duration:.2f} seconds: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'success': False, 'error': str(e)}), 500
+    finally:
+        print("=== OBS Connection Test Complete ===")
+
+
+@app.route('/api/obs/connect', methods=['POST'])
+@admin_required
+def api_obs_connect():
+    """Start persistent OBS WebSocket connection"""
+    global obs_client
+    try:
+        if obs_client and obs_client.connected:
+            # Ensure persistent connection is enabled
+            obs_client.enable_persistent_connection()
+            return jsonify({'success': True, 'message': 'Already connected to OBS (persistent connection enabled)'})
+        
+        # Create new client if none exists
+        if not obs_client:
+            obs_client = OBSWebSocketClient()
+        
+        # Enable persistent connection and connect
+        obs_client.enable_persistent_connection()
+        
+        if obs_client.connected:
+            return jsonify({'success': True, 'message': 'Connected to OBS WebSocket server with persistent connection'})
+        else:
+            return jsonify({'success': False, 'error': 'Failed to connect to OBS WebSocket server'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/obs/disconnect', methods=['POST'])
+@admin_required
+def api_obs_disconnect():
+    """Permanently stop OBS WebSocket connection"""
+    global obs_client
+    try:
+        if obs_client:
+            obs_client.disconnect(permanent=True)  # Permanent disconnection
+            obs_client = None
+        
+        return jsonify({'success': True, 'message': 'Permanently disconnected from OBS WebSocket server'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/obs/status', methods=['GET'])
+@admin_required
+def api_obs_status():
+    """Get OBS WebSocket connection status"""
+    global obs_client
+    try:
+        print(f"📊 OBS Status Check - obs_client exists: {obs_client is not None}")
+        
+        # Check if OBS connection is enabled in settings
+        obs_config_path = DATA_DIR / 'config' / 'obs_settings.json'
+        obs_enabled = True  # Default to enabled
+        
+        if obs_config_path.exists():
+            try:
+                with open(obs_config_path, 'r') as f:
+                    settings = json.load(f)
+                    obs_enabled = settings.get('enabled', True)
+                    print(f"📊 OBS Connection enabled in settings: {obs_enabled}")
+            except Exception as e:
+                print(f"📊 Error reading settings: {e}")
+        
+        # If connection is disabled, return disconnected status
+        if not obs_enabled:
+            print("📊 OBS Connection is disabled by user")
+            return jsonify({
+                'success': True, 
+                'connected': False,
+                'current_scene': None,
+                'scene_list': [],
+                'disabled': True
+            })
+        
+        # If obs_client doesn't exist, try to initialize it ONCE
+        if obs_client is None:
+            print("🔧 obs_client is None, attempting to initialize...")
+            try:
+                obs_client = OBSWebSocketClient()
+                print("✅ OBS client created successfully")
+                
+                # Check for settings and enable persistent connection
+                if obs_client.load_settings():
+                    print("📋 Settings loaded, enabling persistent connection...")
+                    obs_client.enable_persistent_connection()
+                    print(f"📋 Persistent connection enabled. Connected: {obs_client.connected}")
+                else:
+                    print("⚠️ No OBS settings found")
+            except Exception as init_error:
+                print(f"❌ Failed to initialize obs_client: {init_error}")
+                obs_client = None
+        elif obs_client and not obs_client.should_be_connected and obs_enabled:
+            # If we have a client but it's not set to be connected, but settings say it should be
+            print("🔧 Re-enabling persistent connection for existing client...")
+            obs_client.enable_persistent_connection()
+        
+        if obs_client:
+            print(f"📊 OBS Status - connected: {obs_client.connected}, should_be_connected: {obs_client.should_be_connected}")
+        
+        if obs_client and obs_client.connected:
+            # Verify connection is actually working by trying to get data
+            try:
+                print(f"📊 Testing connection health by requesting scene data...")
+                current_scene = obs_client.get_current_scene()
+                scene_list = obs_client.get_scene_list()
+                
+                print(f"📊 Connection test successful - Current scene: {current_scene}, Scene count: {len(scene_list) if scene_list else 0}")
+                
+                # Save current scene to persistent storage if we have data
+                if current_scene:
+                    try:
+                        obs_client._save_current_scene_to_storage(current_scene)
+                        print(f"💾 Updated persistent storage with current scene: {current_scene}")
+                    except Exception as storage_error:
+                        print(f"⚠️ Failed to update storage in status check: {storage_error}")
+                
+                # Note: Scene list is only updated manually via UI refresh button
+                # We don't need automatic scene list updates in the backend
+                
+                # If we got here, connection is working
+                return jsonify({
+                    'success': True, 
+                    'connected': True,
+                    'current_scene': current_scene,
+                    'scene_list': scene_list  # Still return it for immediate UI display
+                })
+            except Exception as e:
+                print(f"📊 OBS Status - Connection test failed: {e}")
+                # Connection is broken, update the client status
+                obs_client.connected = False
+                
+                # Determine if this is a connection timeout vs other error
+                error_str = str(e)
+                if "10060" in error_str or "timeout" in error_str.lower() or "connection" in error_str.lower():
+                    error_message = "Connection failed: Please verify your connection details"
+                else:
+                    error_message = f"Connection error: {str(e)}"
+                
+                return jsonify({
+                    'success': True, 
+                    'connected': False,
+                    'current_scene': None,
+                    'scene_list': [],
+                    'error': error_message
+                })
+        else:
+            return jsonify({
+                'success': True, 
+                'connected': False,
+                'current_scene': None,
+                'scene_list': []
+            })
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/obs/scenes', methods=['GET'])
+@admin_required
+def api_obs_scenes():
+    """Get list of all OBS scenes - TRANSIENT DATA for UI only"""
+    global obs_client
+    try:
+        if obs_client and obs_client.connected:
+            scene_list = obs_client.get_scene_list()
+            print(f"📋 Fetched scene list for UI: {len(scene_list) if scene_list else 0} scenes")
+            return jsonify({'success': True, 'scenes': scene_list})
+        else:
+            return jsonify({'success': False, 'error': 'Not connected to OBS'})
+            
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/obs/current-scene', methods=['GET'])
+@admin_required
+def api_obs_current_scene_get():
+    """Get current scene data from persistent storage"""
+    try:
+        current_scene_path = DATA_DIR / 'config' / 'obs_current_scene.json'
+        
+        if current_scene_path.exists():
+            with open(current_scene_path, 'r') as f:
+                scene_data = json.load(f)
+        else:
+            # Default data if file doesn't exist
+            scene_data = {
+                'current_scene': None,
+                'last_updated': None,
+                'scene_list': []
+            }
+        
+        return jsonify({'success': True, 'scene_data': scene_data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/obs/current-scene', methods=['POST'])
+@admin_required
+def api_obs_current_scene_post():
+    """Update current scene data in persistent storage"""
+    try:
+        data = request.get_json()
+        
+        if not data:
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
+        
+        # Load existing data (minimal structure - no scene_list)
+        current_scene_path = DATA_DIR / 'config' / 'obs_current_scene.json'
+        if current_scene_path.exists():
+            with open(current_scene_path, 'r') as f:
+                loaded_data = json.load(f)
+                # Only preserve current_scene and last_updated, ignore scene_list
+                scene_data = {
+                    'current_scene': loaded_data.get('current_scene'),
+                    'last_updated': loaded_data.get('last_updated')
+                }
+        else:
+            scene_data = {
+                'current_scene': None,
+                'last_updated': None
+            }
+        
+        # Update with new data (current_scene only - ignore scene_list)
+        if 'current_scene' in data:
+            scene_data['current_scene'] = data['current_scene']
+            scene_data['last_updated'] = datetime.now().isoformat()
+        
+        # Note: We intentionally ignore scene_list updates - not stored permanently
+        
+
+        
+        # Ensure config directory exists
+        config_dir = DATA_DIR / 'config'
+        config_dir.mkdir(exist_ok=True)
+        
+        # Save updated data
+        with open(current_scene_path, 'w') as f:
+            json.dump(scene_data, f, indent=2)
+        
+        return jsonify({'success': True, 'scene_data': scene_data})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+# =============================================================================
+# Main Application Startup
+# =============================================================================
+
+if __name__ == '__main__':
+    # Create required directories
+    ANIMATIONS_DIR.mkdir(exist_ok=True)
+    VIDEOS_DIR.mkdir(exist_ok=True)
+    DATA_DIR.mkdir(exist_ok=True)
+    LOGS_DIR.mkdir(exist_ok=True)
+    THUMBNAILS_DIR.mkdir(exist_ok=True)
+    CONFIG_DIR.mkdir(exist_ok=True)
+    
+    # Initialize state file with current scene tracking
+    ensure_state_file()
+    
+    # Create default admin user if users.json doesn't exist
+    if not USERS_FILE.exists():
+        print("Creating default admin user configuration...")
+        
+        # Generate secure random passwords for default users
+        import secrets
+        admin_password = secrets.token_urlsafe(12)  # Strong random password
+        viewer_password = secrets.token_urlsafe(8)   # Simpler random password
+        
+        default_users = {
+            "admin": {
+                "password": admin_password,
+                "role": "admin",
+                "created": datetime.now().isoformat(),
+                "last_login": None
+            },
+            "viewer": {
+                "password": viewer_password,
+                "role": "viewer", 
+                "created": datetime.now().isoformat(),
+                "last_login": None
+            },
+            "config": {
+                "password_requirements": {
+                    "min_length": 6,
+                    "require_numbers": False,
+                    "require_symbols": False
+                }
+            },
+            "session_config": {
+                "timeout_minutes": 60,
+                "remember_me_days": 7
+            }
+        }
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(default_users, f, indent=2)
+    
+    # Run the Flask-SocketIO server on all interfaces (0.0.0.0) port 8080
+    print("OBS-TV-Animator WebSocket Server Starting...")
+    print("=" * 84)
+    print(f"Available animations: {get_animation_files()}")
+    print(f"Available videos: {get_video_files()}")
+    print("=" * 84)
+    print("🌐 HTTP API Routes:")
+    print("  GET  /               - Smart TV display (main animation endpoint)")
+    print("  GET  /admin          - Admin dashboard and file management")
+    print("  POST /trigger        - Update media via API (JSON: {\"animation\": \"file.html|mp4\"})")
+    print("  GET  /animations     - List available media files")
+    print("  GET  /health         - Health check endpoint")
+    print("=" * 84)
+    print("🔌 WebSocket Integration:")
+    print(f"  Socket.IO (port {MAIN_PORT}) - Real-time communication")
+    print("    • Admin dashboard updates")
+    print("    • Animation page refresh & status")
+    print("    • OTA Integration (/static/js/ota-integration.js)")
+    print(f"  Raw WebSocket (port {WEBSOCKET_PORT}) - StreamerBot compatibility")
+    print("    • Legacy integration support")
+    print("=" * 84)
+    print("📁 Media Storage:")
+    print(f"  Animations: {ANIMATIONS_DIR} ({len(get_animation_files())} files)")
+    print(f"  Videos: {VIDEOS_DIR} ({len(get_video_files())} files)")
+    print(f"  Data: {DATA_DIR} (users, settings, thumbnails)")
+    print("=" * 84)
+    print("🤖 StreamerBot Integration:")
+    print("  • Use 'StreamerBot C#' buttons in admin file management")
+    print("  • Copy ready-to-use C# code for each animation")
+    print("  • HTTP triggers also available for legacy setups")
+    print("  • Visit /admin/instructions/streamerbot-integration for setup guide")
+    print("=" * 84)
+    print("✨ Custom Animation Development:")
+    print("  • Add OTA Integration to your HTML files:")
+    print("    <link rel=\"stylesheet\" href=\"/static/css/ota-integration.css\">")
+    print("    <script src=\"/static/js/ota-integration.js\"></script>")
+    print("  • Enables status indicators, WebSocket sync, and page refresh")
+    print("  • Visit /admin/instructions/getting-started for complete guide")
+    print("=" * 84)
+
+    try:
+        # Initialize file trigger watcher for StreamerBot
+        print("🔍 Starting file trigger watcher...")
+        trigger_file = DATA_DIR / "trigger.txt"
+        file_watcher = TriggerFileWatcher(str(trigger_file))
+        file_watcher.start_watching()
+        print("✓ File trigger watcher started")
+        
+        # Initialize OBS Scene Watcher for automatic animation triggering
+        print("🎬 Starting OBS Scene Watcher...")
+        obs_scene_file = DATA_DIR / "config" / "obs_current_scene.json"
+        obs_mappings_file = DATA_DIR / "config" / "obs_mappings.json"
+        obs_scene_watcher = OBSSceneWatcher(str(obs_scene_file), str(obs_mappings_file))
+        obs_scene_watcher.start_watching()
+        print("✓ OBS Scene Watcher started")
+        
+        # Start the raw WebSocket server for StreamerBot
+        print(f"🚀 Starting Raw WebSocket server on port {WEBSOCKET_PORT} for StreamerBot...")
+        try:
+            websocket_thread = raw_websocket_server.start_server()
+            print("✓ Raw WebSocket server started successfully")
+        except Exception as e:
+            print(f"❌ Error starting Raw WebSocket server: {e}")
+            print("⚠️  Continuing without Raw WebSocket server...")
+        
+        # Give the WebSocket server a moment to start
+        import time
+        time.sleep(1)
+        print("✓ Raw WebSocket server ready!")
+        
+        # Initialize OBS WebSocket client (will attempt connection if settings exist)
+        print("🎬 Initializing OBS WebSocket client...")
+        obs_client = OBSWebSocketClient()
+        print("✓ OBS WebSocket client initialized")
+        
+        # Attempt auto-connection if settings exist
+        print("📋 Checking for existing OBS settings...")
+        if obs_client.load_settings():
+            # Log the loaded settings for debugging (without password)
+            settings_debug = obs_client.settings.copy()
+            if 'password' in settings_debug:
+                settings_debug['password'] = '[REDACTED]' if settings_debug['password'] else '[EMPTY]'
+            print(f"📋 Found OBS settings: {settings_debug}")
+            
+            print("📋 FORCING PERSISTENT OBS CONNECTION...")
+            try:
+                # CRITICAL: Enable all persistent connection flags FIRST
+                obs_client.auto_reconnect_enabled = True
+                obs_client.should_be_connected = True
+                print("🔧 Persistent connection flags set: auto_reconnect=True, should_be_connected=True")
+                
+                # Force enable persistent connection (this includes connection attempt)
+                obs_client.enable_persistent_connection()
+                
+                if obs_client.connected:
+                    print("✅ SUCCESSFULLY CONNECTED TO OBS - PERSISTENT CONNECTION ACTIVE")
+                    print(f"✅ Connection monitoring active: {obs_client.auto_reconnect_enabled}")
+                else:
+                    print("⚠️  Initial connection failed but PERSISTENT RECONNECTION IS ACTIVE")
+                    print("🔄 Connection monitor will continuously attempt reconnection...")
+                    
+            except Exception as e:
+                print(f"❌ CRITICAL: OBS connection error during startup: {e}")
+                print("� FORCING RECONNECTION MONITOR ANYWAY...")
+                # CRITICAL: Always ensure the monitor is running if settings are enabled
+                try:
+                    obs_client.auto_reconnect_enabled = True
+                    obs_client.should_be_connected = True
+                    obs_client._start_connection_monitor()
+                    print("✅ FORCED connection monitor started - will reconnect when OBS available")
+                except Exception as monitor_error:
+                    print(f"❌ FATAL: Could not start connection monitor: {monitor_error}")
+        else:
+            print("ℹ️  No OBS settings found - connection will be available when configured")
+        
+        print("🚀 Starting Flask-SocketIO server...")
+        socketio.run(app, host='0.0.0.0', port=MAIN_PORT, debug=False, allow_unsafe_werkzeug=True)
+        
+    except Exception as e:
+        print(f"❌ FATAL ERROR during startup: {e}")
+        import traceback
+        traceback.print_exc()
+        print("⚠️  Server startup failed!")

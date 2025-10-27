@@ -73,6 +73,12 @@ class AdminDashboard {
             const data = await response.json();
             
             if (data.error) {
+                // Handle authentication error specifically
+                if (response.status === 401 || data.authenticated === false) {
+                    console.log('Authentication expired, redirecting to login...');
+                    window.location.href = '/admin/login';
+                    return;
+                }
                 throw new Error(data.error);
             }
             
@@ -225,23 +231,41 @@ class AdminDashboard {
     }
 
     updateOBSStatus(obsDevices, obsCount) {
-        // #INSERT CODE HERE# - Future OBS Studio WebSocket integration
-        // TODO: Implement OBS Studio WebSocket connection detection
-        // This will connect to OBS Studio's WebSocket server (usually port 4455)
-        // and display connection status similar to StreamerBot
-        
-        const indicator = document.getElementById('obsIndicator');
-        const status = document.getElementById('obsStatus');
-        
-        // For now, always show as disconnected until we implement OBS WebSocket integration
-        indicator.className = 'device-indicator disconnected';
-        status.textContent = 'Not Connected';
-        
-        // Future implementation notes:
-        // - Use obs-websocket-js library or native WebSocket
-        // - Connect to ws://localhost:4455 (default OBS WebSocket port)
-        // - Handle authentication if OBS has password set
-        // - Monitor connection status and update indicator accordingly
+        // Use existing OBS status endpoint from OBS management page
+        this.fetchOBSStatus();
+    }
+
+    async fetchOBSStatus() {
+        try {
+            const response = await fetch('/api/obs/status');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            
+            const data = await response.json();
+            const indicator = document.getElementById('obsIndicator');
+            const status = document.getElementById('obsStatus');
+            
+            if (data.success && data.connected) {
+                indicator.className = 'device-indicator connected';
+                status.textContent = 'Connected';
+                if (data.current_scene) {
+                    status.textContent = `Connected - Scene: ${data.current_scene}`;
+                }
+            } else {
+                indicator.className = 'device-indicator disconnected';
+                status.textContent = data.disabled ? 'Disabled' : 'Not Connected';
+                if (data.error && !data.disabled) {
+                    status.textContent = 'Connection Failed';
+                }
+            }
+        } catch (error) {
+            console.error('Failed to fetch OBS status:', error);
+            const indicator = document.getElementById('obsIndicator');
+            const status = document.getElementById('obsStatus');
+            indicator.className = 'device-indicator disconnected';
+            status.textContent = 'Not Connected';
+        }
     }
 
     // Legacy method for WebSocket events - now delegates to specific methods

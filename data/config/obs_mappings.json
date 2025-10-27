@@ -1,0 +1,22 @@
+[
+  {
+    "animation": "anim1.html",
+    "sceneName": "Game"
+  },
+  {
+    "animation": "anim2.html",
+    "sceneName": "VS-Code Layout"
+  },
+  {
+    "animation": "embers.mp4",
+    "sceneName": "Just Chatting"
+  },
+  {
+    "animation": "test_brb.html",
+    "sceneName": "Away Screen"
+  },
+  {
+    "animation": "embers.mp4",
+    "sceneName": "Closing Stream"
+  }
+]
